@@ -1,0 +1,8 @@
+{
+    "npmScope": "edumind",
+    "workspaceLayout": {
+        "appsDir": "apps",
+        "libsDir": "packages"
+    },
+    "useInferencePlugins": false
+}
