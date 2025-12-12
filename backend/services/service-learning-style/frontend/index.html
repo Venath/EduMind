@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMind - Learning Style Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="chart.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="48" height="48">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.829-.795A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.804m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443a55.381 55.381 0 015.25 2.882V15" />
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>EduMind</h1>
+                    <p>Learning Style Dashboard</p>
+                </div>
+            </div>
+            <div class="system-badge" id="systemBadge">
+                <div class="badge-pulse"></div>
+                <span>System Online</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Stats Dashboard -->
+        <div class="stats-dashboard">
+            <div class="stat-card-modern" data-color="purple">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="32" height="32">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalStudents">--</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+            </div>
+
+            <div class="stat-card-modern" data-color="blue">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="32" height="32">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalResources">--</div>
+                    <div class="stat-label">Resources</div>
+                </div>
+            </div>
+
+            <div class="stat-card-modern" data-color="green">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="32" height="32">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalRecommendations">--</div>
+                    <div class="stat-label">Recommendations</div>
+                </div>
+            </div>
+
+            <div class="stat-card-modern" data-color="orange">
+                <div class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="32" height="32">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="completionRate">--</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workflow Section -->
+        <div class="workflow-container">
+            <!-- Step 1: Student Selection -->
+            <div class="workflow-card" id="step1Card">
+                <div class="workflow-header">
+                    <div class="step-badge">Step 1</div>
+                    <h2>Select Student</h2>
+                    <p>Enter or select a student ID to begin analysis</p>
+                </div>
+                
+                <div class="student-input-section">
+                    <div class="input-group-modern">
+                        <label for="studentInput">Student ID</label>
+                        <div class="input-with-icon">
+                            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            <input 
+                                type="text" 
+                                id="studentInput" 
+                                class="modern-input" 
+                                placeholder="Type student ID (e.g., STU0001)"
+                                list="studentsList"
+                            >
+                            <datalist id="studentsList"></datalist>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary-modern" id="loadStudentBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                        </svg>
+                        <span>Load Student Profile</span>
+                    </button>
+                </div>
+
+                <!-- Student Profile Display -->
+                <div class="student-profile-card" id="studentProfileCard" style="display: none;">
+                    <div class="profile-header">
+                        <div class="profile-avatar">
+                            <span id="studentInitials">ST</span>
+                        </div>
+                        <div class="profile-info">
+                            <h3 id="profileStudentId">STU0001</h3>
+                            <p id="profileMetadata">Profile loaded successfully</p>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Preferred Difficulty</span>
+                            <span class="detail-value" id="profileDifficulty">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Completion Rate</span>
+                            <span class="detail-value" id="profileCompletionRate">--</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Days Tracked</span>
+                            <span class="detail-value" id="profileDaysTracked">--</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-secondary-modern" id="proceedToClassifyBtn">
+                        <span>Continue to Analysis</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: ML Classification -->
+            <div class="workflow-card" id="step2Card" style="display: none;">
+                <div class="workflow-header">
+                    <div class="step-badge">Step 2</div>
+                    <h2>Learning Style Analysis</h2>
+                    <p>Analyze behavioral patterns to identify learning style</p>
+                </div>
+
+                <div class="classification-section">
+                    <div class="ai-visualization">
+                        <div class="brain-icon">
+                            <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+                                <circle cx="60" cy="60" r="50" stroke="url(#brainGradient)" stroke-width="2" opacity="0.3"/>
+                                <circle cx="60" cy="60" r="40" stroke="url(#brainGradient)" stroke-width="2" opacity="0.5"/>
+                                <circle cx="60" cy="60" r="30" stroke="url(#brainGradient)" stroke-width="2" opacity="0.7"/>
+                                <circle cx="60" cy="60" r="20" fill="url(#brainGradient)"/>
+                                <defs>
+                                    <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#6366f1"/>
+                                        <stop offset="100%" style="stop-color:#8b5cf6"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                        <p class="ai-description">Analysis Ready</p>
+                    </div>
+
+                    <button class="btn-ai-classify" id="classifyBtn">
+                        <div class="btn-glow"></div>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="24" height="24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Analyze Learning Style</span>
+                    </button>
+                </div>
+
+                <!-- ML Results -->
+                <div class="ml-results-card" id="mlResultsCard" style="display: none;">
+                    <div class="results-header">
+                        <div class="success-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="32" height="32">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                            </svg>
+                        </div>
+                        <h3>Analysis Complete</h3>
+                    </div>
+
+                    <div class="prediction-display">
+                        <div class="prediction-label">Identified Learning Style</div>
+                        <div class="prediction-value" id="mlPredictedStyle">Visual</div>
+                        <div class="confidence-display">
+                            <span class="confidence-label">Confidence:</span>
+                            <span class="confidence-value" id="mlConfidence">89.3%</span>
+                            <span class="confidence-badge" id="mlConfidenceBadge">High</span>
+                        </div>
+                    </div>
+
+                    <div class="probability-section">
+                        <h4>Probability Distribution</h4>
+                        <div id="probabilityBars" class="probability-container"></div>
+                    </div>
+
+                    <div class="model-metadata">
+                        <div class="metadata-item">
+                            <span class="metadata-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="24" height="24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                                </svg>
+                            </span>
+                            <div>
+                                <div class="metadata-label">Method</div>
+                                <div class="metadata-value">Pattern Analysis</div>
+                            </div>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="24" height="24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                                </svg>
+                            </span>
+                            <div>
+                                <div class="metadata-label">Accuracy</div>
+                                <div class="metadata-value">85%</div>
+                            </div>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="24" height="24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </span>
+                            <div>
+                                <div class="metadata-label">Analyzed</div>
+                                <div class="metadata-value" id="mlPredictedAt">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-secondary-modern" id="proceedToRecommendBtn">
+                        <span>Get Recommendations</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- ML Loading State -->
+                <div class="ml-loading" id="mlLoading" style="display: none;">
+                    <div class="loader-spinner"></div>
+                    <p>Analyzing learning patterns...</p>
+                    <div class="loading-steps">
+                        <div class="loading-step">Reviewing activity</div>
+                        <div class="loading-step">Analyzing patterns</div>
+                        <div class="loading-step">Identifying style</div>
+                    </div>
+                </div>
+
+                <!-- ML Error State -->
+                <div class="error-state" id="mlError" style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="48" height="48">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                    <h3>Analysis Failed</h3>
+                    <p id="mlErrorMessage">An error occurred</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Recommendations -->
+            <div class="workflow-card" id="step3Card" style="display: none;">
+                <div class="workflow-header">
+                    <div class="step-badge">Step 3</div>
+                    <h2>Personalized Recommendations</h2>
+                    <p>Resource suggestions tailored to your learning style</p>
+                </div>
+
+                <div class="recommendation-controls">
+                    <div class="input-group-modern">
+                        <label for="topicInput">Topic (Optional)</label>
+                        <input 
+                            type="text" 
+                            id="topicInput" 
+                            class="modern-input" 
+                            placeholder="e.g., Python Loops, Data Structures"
+                        >
+                    </div>
+
+                    <div class="input-group-modern">
+                        <label for="maxRecsInput">Number of Recommendations</label>
+                        <div class="slider-container">
+                            <input type="range" id="maxRecsInput" min="1" max="10" value="5" class="modern-slider">
+                            <span class="slider-value" id="sliderValue">5</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary-modern" id="generateBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        <span>Get Recommendations</span>
+                    </button>
+                </div>
+
+                <!-- Recommendations Display -->
+                <div id="recommendationsDisplay" class="recommendations-display" style="display: none;">
+                    <div class="recommendations-header">
+                        <h3>Your Personalized Resources</h3>
+                        <span class="recommendations-count" id="recommendationsCount">5 resources found</span>
+                    </div>
+                    <div id="recommendationsList" class="recommendations-grid"></div>
+                </div>
+
+                <!-- Recommendations Loading -->
+                <div class="recommendations-loading" id="recommendationsLoading" style="display: none;">
+                    <div class="loader-spinner"></div>
+                    <p>Finding personalized resources...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="analytics-section">
+            <div class="analytics-card">
+                <h3>Learning Style Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="learningStyleChart"></canvas>
+                </div>
+            </div>
+
+            <div class="analytics-card">
+                <h3>Top Struggle Topics</h3>
+                <div class="chart-container">
+                    <canvas id="struggleTopicsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification">
+        <div class="toast-icon"></div>
+        <div class="toast-content">
+            <div class="toast-title" id="toastTitle">Success</div>
+            <div class="toast-message" id="toastMessage">Operation completed</div>
+        </div>
+        <button class="toast-close" id="toastClose">×</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="overlay-content">
+            <div class="loader-spinner-large"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
