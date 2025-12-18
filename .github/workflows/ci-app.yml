@@ -1,12 +1,8 @@
-name: CI - Backend Services
+name: CI - Quick Validation
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'backend/services/**'
   pull_request:
-    branches: [ main ]
+    branches: [main, develop]
     paths:
       - 'backend/services/**'
 
@@ -38,7 +34,8 @@ jobs:
             service-engagement-tracker:
               - 'backend/services/service-engagement-tracker/**'
 
-  test-and-build-services:
+  # Quick validation only - no deployment
+  quick-validation:
     needs: detect-changed-services
     if: needs.detect-changed-services.outputs.services != '[]'
     strategy:
@@ -46,25 +43,6 @@ jobs:
         service: ${{ fromJSON(needs.detect-changed-services.outputs.services) }}
     runs-on: ubuntu-latest
     
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-
     steps:
       - uses: actions/checkout@v4
       
@@ -74,138 +52,73 @@ jobs:
           cache: 'pip'
           cache-dependency-path: backend/services/${{ matrix.service }}/requirements.txt
       
-      - name: Install service dependencies
+      - name: Install dependencies
         working-directory: backend/services/${{ matrix.service }}
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio httpx
+          pip install pytest pytest-asyncio httpx black isort flake8 safety bandit
       
-      - name: Run linting (if available)
+      - name: Code Quality Checks
         working-directory: backend/services/${{ matrix.service }}
         run: |
-          if [ -f "pyproject.toml" ] || [ -f ".flake8" ]; then
-            pip install flake8 black isort
-            flake8 app/ || true
-            black --check app/ || true
-            isort --check-only app/ || true
-          fi
+          echo "Running Black..."
+          black --check app/ tests/ || echo "::warning::Black formatting issues found"
+          
+          echo "Running isort..."
+          isort --check-only app/ tests/ || echo "::warning::Import sorting issues found"
+          
+          echo "Running Flake8..."
+          flake8 app/ tests/ --max-line-length=100 --ignore=E203,W503 || echo "::warning::Flake8 issues found"
       
-      - name: Run unit tests
+      - name: Security Scanning
+        working-directory: backend/services/${{ matrix.service }}
+        run: |
+          echo "Running Safety check..."
+          safety check --json || echo "::warning::Dependency vulnerabilities found"
+          
+          echo "Running Bandit..."
+          bandit -r app/ -f json || echo "::warning::Security issues found"
+      
+      - name: Unit Tests
         working-directory: backend/services/${{ matrix.service }}
         run: |
           if [ -d "tests" ]; then
-            pytest tests/ -v
+            echo "Running unit tests..."
+            pytest tests/ -v --cov=app --cov-report=term --maxfail=5
           else
-            echo "No tests directory found, creating basic health test..."
-            python -c "
-            import sys
-            sys.path.append('.')
-            from app.main import app
-            from fastapi.testclient import TestClient
-            client = TestClient(app)
-            response = client.get('/health')
-            assert response.status_code == 200
-            print('Health check test passed')
-            "
+            echo "No tests directory found"
           fi
         env:
-          DATABASE_URL: postgresql://postgres:test_password@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
-          SECRET_KEY: test_secret_key
+          PYTHONPATH: .
           ENVIRONMENT: test
       
-      - name: Build Docker image (using existing Dockerfile)
-        working-directory: backend/services/${{ matrix.service }}
-        run: |
-          docker build -t ${{ matrix.service }}:test .
-      
-      - name: Test Docker image
-        working-directory: backend/services/${{ matrix.service }}
-        run: |
-          # Run container in background
-          docker run --rm -d --name ${{ matrix.service }}-test \
-            -p 8000:8000 \
-            -e DATABASE_URL=postgresql://postgres:test_password@host.docker.internal:5432/test_db \
-            -e REDIS_URL=redis://host.docker.internal:6379 \
-            -e ENVIRONMENT=test \
-            ${{ matrix.service }}:test
-          
-          # Wait for service to start
-          sleep 15
-          
-          # Health check
-          curl -f http://localhost:8000/health || curl -f http://localhost:8000/ || exit 1
-          
-          # Cleanup
-          docker stop ${{ matrix.service }}-test
-
-  integration-tests:
-    needs: [detect-changed-services, test-and-build-services]
-    if: needs.detect-changed-services.outputs.services != '[]'
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: edumind_integration
-        ports:
-          - 5432:5432
-      
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Build and start all changed services
-        run: |
-          services="${{ join(fromJSON(needs.detect-changed-services.outputs.services), ' ') }}"
-          port=8001
-          
-          for service in $services; do
-            echo "Building and starting $service on port $port..."
-            
-            cd backend/services/$service
-            docker build -t $service:integration .
-            
-            docker run -d --name $service \
-              -p $port:8000 \
-              -e DATABASE_URL=postgresql://postgres:test_password@host.docker.internal:5432/edumind_integration \
-              -e REDIS_URL=redis://host.docker.internal:6379 \
-              -e ENVIRONMENT=test \
-              $service:integration
-            
-            cd ../../..
-            port=$((port + 1))
-          done
-      
-      - name: Wait for services to be healthy
-        run: |
-          echo "Waiting for services to start..."
-          sleep 30
-          
-          # Check health endpoints
-          for port in {8001..8006}; do
-            if curl -f http://localhost:$port/health 2>/dev/null || curl -f http://localhost:$port/ 2>/dev/null; then
-              echo "Service on port $port is healthy"
-            else
-              echo "Service on port $port not responding (may not be running)"
-            fi
-          done
-      
-      - name: Run integration tests
-        run: |
-          echo "Running integration tests..."
-          # Add your integration test commands here
-          # python tests/integration/test_services.py
-      
-      - name: Cleanup containers
+      - name: Comment PR with Results
         if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const service = '${{ matrix.service }}';
+            const conclusion = '${{ job.status }}';
+            const emoji = conclusion === 'success' ? '✅' : '❌';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${emoji} **${service}** validation ${conclusion}\n\n` +
+                    `Quick checks completed. ` +
+                    `Jenkins will handle full build and deployment on merge.`
+            });
+
+  # Notify that validation passed
+  validation-complete:
+    needs: [detect-changed-services, quick-validation]
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Success notification
         run: |
-          docker stop $(docker ps -q) 2>/dev/null || true
-          docker rm $(docker ps -aq) 2>/dev/null || true
+          echo "All validations passed!"
+          echo "Merge this PR to trigger Jenkins deployment pipeline."

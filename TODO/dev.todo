@@ -1,0 +1,61 @@
+created the deployement pattern using jenkins and github actions
+GitHub Actions for Validation, Jenkins for Everything Else
+
+github action is used to do the  
+Code formatting (Black, isort)
+Linting (Flake8)
+Unit tests
+Security scanning (Safety, Bandit)
+PR status checks
+
+Jenkins is used to do the 
+Docker build
+Push to Azure Container Registry (ACR)
+Deploy to Azure Container Apps
+Integration tests
+Performance tests
+
+
+Sprint 1 Goal: Establish core Azure infrastructure and CI/CD pipeline foundation
+
+Completed:
+  [x] Created deployment pattern using Jenkins and GitHub Actions
+  [x] GitHub Actions for Validation, Jenkins for Everything Else
+
+GitHub Actions handles:
+  [ ] Code formatting (Black, isort)
+  [ ] Linting (Flake8)
+  [ ] Unit tests
+  [ ] Security scanning (Safety, Bandit)
+  [ ] PR status checks
+
+Jenkins handles:
+  [ ] Docker build
+  [ ] Push to Azure Container Registry (ACR)
+  [ ] Deploy to Azure Container Apps
+  [ ] Integration tests
+  [ ] Performance tests
+
+Sprint 1 Tickets:
+  [ ] EDUMIND-101: Setup Azure Infrastructure (8 pts)
+  [ ] EDUMIND-102: Create Azure Service Principal and RBAC (5 pts)
+  [ ] EDUMIND-103: Setup Azure Container Apps Environment (8 pts)
+  [ ] EDUMIND-104: Setup Jenkins Server (5 pts)
+  [ ] EDUMIND-105: Configure Jenkins Credentials for Azure (3 pts)
+  [ ] EDUMIND-106: Configure GitHub Secrets (2 pts)
+
+Sprint 1 Success Criteria:
+  [ ] Azure infrastructure deployed via Terraform
+  [ ] Jenkins running and configured
+  [ ] GitHub Actions validating PRs
+  [ ] First service deployed to Container Apps
+  [ ] All credentials secured in Key Vault
+
+Azure Services Used:
+  - Azure Container Registry (ACR) - Docker images
+  - Azure Container Apps - Microservices hosting
+  - Azure Database for PostgreSQL - Database
+  - Azure Cache for Redis - Caching
+  - Azure Key Vault - Secrets management
+  - Azure Monitor & Application Insights - Monitoring
+  - Azure Blob Storage - ML models & static assets

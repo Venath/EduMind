@@ -1,0 +1,439 @@
+// EduMind Backend Services - Deployment Pipeline
+// Strategy 2: GitHub Actions validates PRs, Jenkins handles build & deploy
+
+pipeline {
+    agent {
+        label 'docker'
+    }
+    
+    parameters {
+        string(name: 'BRANCH_NAME', defaultValue: 'develop', description: 'Git branch to deploy')
+        string(name: 'GIT_COMMIT', defaultValue: '', description: 'Git commit SHA')
+        string(name: 'CHANGED_SERVICES', defaultValue: '', description: 'Comma-separated services to deploy')
+        string(name: 'TRIGGERED_BY', defaultValue: 'manual', description: 'Who triggered the deployment')
+    }
+    
+    environment {
+        // Azure Container Registry
+        ACR_NAME = credentials('ACR_NAME')
+        ACR_LOGIN_SERVER = "${ACR_NAME}.azurecr.io"
+        
+        // Azure credentials
+        AZURE_CREDENTIALS = credentials('AZURE_SERVICE_PRINCIPAL')
+        AZURE_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
+        AZURE_TENANT_ID = credentials('AZURE_TENANT_ID')
+        
+        // Container Apps
+        RESOURCE_GROUP = 'edumind-rg'
+        LOCATION = 'eastus'
+        
+        // Environment-specific settings
+        STAGING_ENV = "${params.BRANCH_NAME == 'develop' ? 'staging' : 'staging'}"
+        PROD_ENV = "${params.BRANCH_NAME == 'main' ? 'prod' : 'prod'}"
+        
+        // Image tag
+        IMAGE_TAG = "${params.GIT_COMMIT ? params.GIT_COMMIT.take(8) : env.BUILD_NUMBER}"
+    }
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 30, unit: 'MINUTES')
+        timestamps()
+        ansiColor('xterm')
+    }
+    
+    stages {
+        stage('Pipeline Info') {
+            steps {
+                script {
+                    echo """
+                    ╔═══════════════════════════════════════════════════════╗
+                    ║         EduMind Backend Deployment Pipeline          ║
+                    ╚═══════════════════════════════════════════════════════╝
+                    
+                    Deployment Details:
+                    ├─ Branch: ${params.BRANCH_NAME}
+                    ├─ Commit: ${params.GIT_COMMIT ?: 'latest'}
+                    ├─ Services: ${params.CHANGED_SERVICES ?: 'all'}
+                    ├─ Triggered by: ${params.TRIGGERED_BY}
+                    ├─ Image Tag: ${IMAGE_TAG}
+                    └─ Target: ${params.BRANCH_NAME == 'main' ? 'PRODUCTION' : 'STAGING'}
+                    
+                    Build #${BUILD_NUMBER} started at ${new Date()}
+                    """
+                    
+                    // Parse services to deploy
+                    env.SERVICES_TO_DEPLOY = params.CHANGED_SERVICES ?: 
+                        'user-service,course-service,assessment-service,service-xai-prediction,service-learning-style,service-engagement-tracker'
+                }
+            }
+        }
+        
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "Checking out branch: ${params.BRANCH_NAME}"
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: params.BRANCH_NAME]],
+                        extensions: [
+                            [$class: 'CloneOption', depth: 1, shallow: true],
+                            [$class: 'CheckoutOption', timeout: 10]
+                        ],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/your-org/edumind.git',
+                            credentialsId: 'github-token'
+                        ]]
+                    ])
+                    
+                    // Verify commit if specified
+                    if (params.GIT_COMMIT) {
+                        sh "git checkout ${params.GIT_COMMIT}"
+                    }
+                }
+            }
+        }
+        
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    def services = env.SERVICES_TO_DEPLOY.split(',')
+                    def buildSteps = [:]
+                    
+                    services.each { service ->
+                        buildSteps[service] = {
+                            stage("Build ${service}") {
+                                echo "Building ${service}..."
+                                
+                                dir("backend/services/${service}") {
+                                    sh """
+                                        docker build \
+                                            --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+                                            --build-arg VCS_REF=${params.GIT_COMMIT ?: 'unknown'} \
+                                            --build-arg VERSION=${IMAGE_TAG} \
+                                            -t ${ACR_LOGIN_SERVER}/${service}:${IMAGE_TAG} \
+                                            -t ${ACR_LOGIN_SERVER}/${service}:${params.BRANCH_NAME} \
+                                            -t ${ACR_LOGIN_SERVER}/${service}:latest \
+                                            .
+                                    """
+                                    
+                                    echo "${service} image built successfully"
+                                }
+                            }
+                        }
+                    }
+                    
+                    parallel buildSteps
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                script {
+                    def services = env.SERVICES_TO_DEPLOY.split(',')
+                    def scanSteps = [:]
+                    
+                    services.each { service ->
+                        scanSteps[service] = {
+                            stage("Scan ${service}") {
+                                echo "Scanning ${service} for vulnerabilities..."
+                                
+                                sh """
+                                    docker run --rm \
+                                        -v /var/run/docker.sock:/var/run/docker.sock \
+                                        aquasec/trivy:latest image \
+                                        --severity HIGH,CRITICAL \
+                                        --exit-code 1 \
+                                        --no-progress \
+                                        ${ACR_LOGIN_SERVER}/${service}:${IMAGE_TAG} || \
+                                        (echo "WARNING: Critical vulnerabilities found in ${service}" && exit 1)
+                                """
+                                
+                                echo "${service} security scan passed"
+                            }
+                        }
+                    }
+                    
+                    parallel scanSteps
+                }
+            }
+        }
+        
+        stage('Push to ACR') {
+            steps {
+                script {
+                    echo "Logging into Azure Container Registry..."
+                    
+                    withCredentials([
+                        string(credentialsId: 'ACR_USERNAME', variable: 'ACR_USER'),
+                        string(credentialsId: 'ACR_PASSWORD', variable: 'ACR_PASS')
+                    ]) {
+                        sh """
+                            echo \$ACR_PASS | docker login ${ACR_LOGIN_SERVER} \
+                                --username \$ACR_USER \
+                                --password-stdin
+                        """
+                    }
+                    
+                    def services = env.SERVICES_TO_DEPLOY.split(',')
+                    def pushSteps = [:]
+                    
+                    services.each { service ->
+                        pushSteps[service] = {
+                            stage("Push ${service}") {
+                                echo "Pushing ${service} to ACR..."
+                                
+                                sh """
+                                    docker push ${ACR_LOGIN_SERVER}/${service}:${IMAGE_TAG}
+                                    docker push ${ACR_LOGIN_SERVER}/${service}:${params.BRANCH_NAME}
+                                    docker push ${ACR_LOGIN_SERVER}/${service}:latest
+                                """
+                                
+                                echo "${service} pushed to ACR"
+                            }
+                        }
+                    }
+                    
+                    parallel pushSteps
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                expression { params.BRANCH_NAME in ['develop', 'main'] }
+            }
+            steps {
+                script {
+                    echo "Deploying to STAGING environment..."
+                    
+                    // Login to Azure
+                    withCredentials([
+                        string(credentialsId: 'AZURE_CLIENT_ID', variable: 'CLIENT_ID'),
+                        string(credentialsId: 'AZURE_CLIENT_SECRET', variable: 'CLIENT_SECRET')
+                    ]) {
+                        sh """
+                            az login --service-principal \
+                                --username \$CLIENT_ID \
+                                --password \$CLIENT_SECRET \
+                                --tenant ${AZURE_TENANT_ID}
+                            
+                            az account set --subscription ${AZURE_SUBSCRIPTION_ID}
+                        """
+                    }
+                    
+                    def services = env.SERVICES_TO_DEPLOY.split(',')
+                    
+                    services.each { service ->
+                        echo "Updating ${service} in staging..."
+                        
+                        sh """
+                            az containerapp update \
+                                --name edumind-${service}-staging \
+                                --resource-group ${RESOURCE_GROUP} \
+                                --image ${ACR_LOGIN_SERVER}/${service}:${IMAGE_TAG} \
+                                --set-env-vars "VERSION=${IMAGE_TAG}" "ENVIRONMENT=staging" \
+                                --min-replicas 1 \
+                                --max-replicas 3
+                        """
+                        
+                        echo "Waiting for ${service} to stabilize..."
+                        sleep(time: 15, unit: 'SECONDS')
+                        
+                        // Health check
+                        def appUrl = sh(
+                            script: """
+                                az containerapp show \
+                                    --name edumind-${service}-staging \
+                                    --resource-group ${RESOURCE_GROUP} \
+                                    --query properties.configuration.ingress.fqdn \
+                                    -o tsv
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (appUrl) {
+                            def healthCheck = sh(
+                                script: "curl -f -s -o /dev/null -w '%{http_code}' https://${appUrl}/health || true",
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (healthCheck == '200') {
+                                echo "${service} health check passed"
+                            } else {
+                                error "${service} health check failed (HTTP ${healthCheck})"
+                            }
+                        }
+                    }
+                    
+                    echo "Staging deployment complete!"
+                }
+            }
+        }
+        
+        stage('Integration Tests') {
+            when {
+                expression { params.BRANCH_NAME in ['develop', 'main'] }
+            }
+            steps {
+                script {
+                    echo "Running integration tests on staging..."
+                    
+                    def services = env.SERVICES_TO_DEPLOY.split(',')
+                    
+                    services.each { service ->
+                        def appUrl = sh(
+                            script: """
+                                az containerapp show \
+                                    --name edumind-${service}-staging \
+                                    --resource-group ${RESOURCE_GROUP} \
+                                    --query properties.configuration.ingress.fqdn \
+                                    -o tsv
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (appUrl) {
+                            echo "Testing ${service} API endpoints..."
+                            
+                            // Test health endpoint
+                            sh "curl -f https://${appUrl}/health"
+                            
+                            // Test API endpoint
+                            sh "curl -f https://${appUrl}/api/v1/health"
+                            
+                            echo "${service} integration tests passed"
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                expression { params.BRANCH_NAME == 'main' }
+            }
+            steps {
+                script {
+                    // Manual approval for production
+                    timeout(time: 30, unit: 'MINUTES') {
+                        input message: """
+                            Production Deployment Approval Required
+                            
+                            Services: ${env.SERVICES_TO_DEPLOY}
+                            Version: ${IMAGE_TAG}
+                            
+                            Staging tests: PASSED
+                            
+                            Proceed with production deployment?
+                        """, ok: 'Deploy to Production'
+                    }
+                    
+                    echo "Deploying to PRODUCTION environment..."
+                    
+                    def services = env.SERVICES_TO_DEPLOY.split(',')
+                    
+                    services.each { service ->
+                        echo "Updating ${service} in production..."
+                        
+                        sh """
+                            az containerapp update \
+                                --name edumind-${service}-prod \
+                                --resource-group ${RESOURCE_GROUP} \
+                                --image ${ACR_LOGIN_SERVER}/${service}:${IMAGE_TAG} \
+                                --set-env-vars "VERSION=${IMAGE_TAG}" "ENVIRONMENT=production" \
+                                --min-replicas 2 \
+                                --max-replicas 10 \
+                                --revision-suffix ${IMAGE_TAG.replaceAll('[^a-z0-9-]', '')}
+                        """
+                        
+                        echo "Waiting for ${service} production rollout..."
+                        sleep(time: 30, unit: 'SECONDS')
+                        
+                        // Production health check
+                        def appUrl = sh(
+                            script: """
+                                az containerapp show \
+                                    --name edumind-${service}-prod \
+                                    --resource-group ${RESOURCE_GROUP} \
+                                    --query properties.configuration.ingress.fqdn \
+                                    -o tsv
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (appUrl) {
+                            def healthCheck = sh(
+                                script: "curl -f -s -o /dev/null -w '%{http_code}' https://${appUrl}/health || true",
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (healthCheck == '200') {
+                                echo "${service} production deployment successful"
+                            } else {
+                                error "${service} production health check failed (HTTP ${healthCheck})"
+                            }
+                        }
+                    }
+                    
+                    echo "Production deployment complete!"
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            script {
+                def env_name = params.BRANCH_NAME == 'main' ? 'PRODUCTION' : 'STAGING'
+                
+                echo """
+                ═══════════════════════════════════════════════════
+                    Deployment to ${env_name} SUCCESSFUL!
+                ═══════════════════════════════════════════════════
+                
+                Services deployed: ${env.SERVICES_TO_DEPLOY}
+                Version: ${IMAGE_TAG}
+                Duration: ${currentBuild.durationString}
+                Triggered by: ${params.TRIGGERED_BY}
+                
+                View logs: ${BUILD_URL}
+                """
+                
+                // Send notification (optional)
+                // slackSend(color: 'good', message: "EduMind ${env_name} deployment successful!")
+            }
+        }
+        
+        failure {
+            script {
+                echo """
+                ═══════════════════════════════════════════════════
+                    Deployment FAILED!
+                ═══════════════════════════════════════════════════
+                
+                Services: ${env.SERVICES_TO_DEPLOY}
+                Version: ${IMAGE_TAG}
+                Duration: ${currentBuild.durationString}
+                
+                Check logs: ${BUILD_URL}
+                """
+                
+                // Send failure notification
+                // slackSend(color: 'danger', message: "EduMind deployment failed! Check Jenkins logs.")
+            }
+        }
+        
+        always {
+            script {
+                // Cleanup
+                echo "Cleaning up..."
+                sh """
+                    docker logout ${ACR_LOGIN_SERVER} || true
+                    az logout || true
+                """
+            }
+        }
+    }
+}

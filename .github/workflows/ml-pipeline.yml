@@ -1,0 +1,340 @@
+name: ML Pipeline
+
+on:
+    push:
+        branches: [main, develop]
+        paths:
+            - "ml/**"
+            - "backend/services/service-xai-prediction/app/model/**"
+    workflow_dispatch:
+        inputs:
+            model_type:
+                description: "Model to train/deploy"
+                required: true
+                type: choice
+                options:
+                    - xai_predictor
+                    - engagement_predictor
+                    - learning_style_recognizer
+                    - all
+            force_retrain:
+                description: "Force model retraining even if up-to-date"
+                required: false
+                type: boolean
+                default: false
+
+env:
+    PYTHON_VERSION: "3.9"
+
+jobs:
+    detect-changes:
+        runs-on: ubuntu-latest
+        outputs:
+            xai-changed: ${{ steps.changes.outputs.xai }}
+            engagement-changed: ${{ steps.changes.outputs.engagement }}
+            learning-style-changed: ${{ steps.changes.outputs.learning-style }}
+            should-deploy: ${{ steps.decision.outputs.deploy }}
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 2
+
+            - uses: dorny/paths-filter@v2
+              id: changes
+              with:
+                  filters: |
+                      xai:
+                        - 'ml/models/xai_predictor/**'
+                        - 'ml/models/xai_predictor/train.py'
+                        - 'ml/models/xai_predictor/CSV/**'
+                      engagement:
+                        - 'ml/models/engagement_predictor/**'
+                        - 'ml/models/engagement_predictor/train.py'
+                      learning-style:
+                        - 'ml/models/learning_style_recognizer/**'
+                        - 'ml/models/learning_style_recognizer/train.py'
+
+            - name: Determine deployment
+              id: decision
+              run: |
+                  if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                    echo "deploy=true" >> $GITHUB_OUTPUT
+                  elif [ "${{ steps.changes.outputs.xai }}" = "true" ] || \
+                       [ "${{ steps.changes.outputs.engagement }}" = "true" ] || \
+                       [ "${{ steps.changes.outputs.learning-style }}" = "true" ]; then
+                    echo "deploy=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "deploy=false" >> $GITHUB_OUTPUT
+                  fi
+
+    train-xai-predictor:
+        needs: detect-changes
+        if: |
+            needs.detect-changes.outputs.xai-changed == 'true' || 
+            github.event.inputs.model_type == 'xai_predictor' ||
+            github.event.inputs.model_type == 'all'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v4
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r ml/requirements.txt
+
+            - name: Train XAI Predictor
+              working-directory: ml/models/xai_predictor
+              run: |
+                  echo "🧠 Training XAI Predictor model..."
+                  python train.py
+
+                  echo "📊 Model training complete!"
+                  echo "Model artifacts:"
+                  ls -lh *.joblib 2>/dev/null || echo "No .joblib files found"
+
+            - name: Validate model artifacts
+              working-directory: ml/models/xai_predictor
+              run: |
+                  echo "✅ Checking for required model files..."
+
+                  required_files=(
+                    "student_model_best.joblib"
+                    "scaler_best.joblib"
+                    "label_encoder_best.joblib"
+                    "feature_selector_best.joblib"
+                    "model_features_best.joblib"
+                    "model_metadata_best.joblib"
+                  )
+
+                  missing_files=()
+                  for file in "${required_files[@]}"; do
+                    if [ ! -f "$file" ]; then
+                      missing_files+=("$file")
+                    fi
+                  done
+
+                  if [ ${#missing_files[@]} -gt 0 ]; then
+                    echo "❌ Missing required files:"
+                    printf '%s\n' "${missing_files[@]}"
+                    exit 1
+                  fi
+
+                  echo "✅ All model artifacts present!"
+
+            - name: Upload model artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: xai-predictor-models
+                  path: |
+                      ml/models/xai_predictor/*.joblib
+                  retention-days: 30
+
+            - name: Calculate model sizes
+              id: sizes
+              working-directory: ml/models/xai_predictor
+              run: |
+                  xgb_size=$(du -h student_model_best.joblib | cut -f1)
+                  total_size=$(du -ch *.joblib | grep total | cut -f1)
+
+                  echo "xgb_size=$xgb_size" >> $GITHUB_OUTPUT
+                  echo "total_size=$total_size" >> $GITHUB_OUTPUT
+
+                  echo "📦 Model sizes:"
+                  echo "├─ XGBoost model: $xgb_size"
+                  echo "└─ Total deployment: $total_size"
+
+    train-engagement-predictor:
+        needs: detect-changes
+        if: |
+            needs.detect-changes.outputs.engagement-changed == 'true' ||
+            github.event.inputs.model_type == 'engagement_predictor' ||
+            github.event.inputs.model_type == 'all'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v4
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r ml/requirements.txt
+
+            - name: Train Engagement Predictor
+              working-directory: ml/models/engagement_predictor
+              run: |
+                  echo "🎯 Training Engagement Predictor model..."
+                  python train.py
+                  echo "✅ Engagement predictor training complete!"
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: engagement-predictor-models
+                  path: ml/models/engagement_predictor/models/
+                  retention-days: 30
+
+    train-learning-style:
+        needs: detect-changes
+        if: |
+            needs.detect-changes.outputs.learning-style-changed == 'true' ||
+            github.event.inputs.model_type == 'learning_style_recognizer' ||
+            github.event.inputs.model_type == 'all'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v4
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r ml/requirements.txt
+
+            - name: Train Learning Style Recognizer
+              working-directory: ml/models/learning_style_recognizer
+              run: |
+                  echo "🎨 Training Learning Style Recognizer model..."
+                  python train.py
+                  echo "✅ Learning style recognizer training complete!"
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: learning-style-models
+                  path: ml/models/learning_style_recognizer/models/
+                  retention-days: 30
+
+    deploy-models:
+        needs: [detect-changes, train-xai-predictor]
+        if: |
+            always() &&
+            needs.detect-changes.outputs.should-deploy == 'true' &&
+            (needs.train-xai-predictor.result == 'success' || needs.train-xai-predictor.result == 'skipped')
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Download XAI model artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: xai-predictor-models
+                  path: ml/models/xai_predictor/
+
+            - name: Copy models to service
+              run: |
+                  echo "📦 Copying trained models to service directory..."
+
+                  mkdir -p backend/services/service-xai-prediction/app/model
+
+                  cp ml/models/xai_predictor/*.joblib \
+                     backend/services/service-xai-prediction/app/model/
+
+                  echo "✅ Models copied successfully!"
+                  ls -lh backend/services/service-xai-prediction/app/model/
+
+            - name: Commit updated models
+              run: |
+                  git config --global user.name "github-actions[bot]"
+                  git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+                  git add backend/services/service-xai-prediction/app/model/*.joblib
+
+                  if git diff --staged --quiet; then
+                    echo "No model changes to commit"
+                  else
+                    git commit -m "chore: update XAI predictor models [skip ci]
+                    
+                    - Trained on $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+                    - Triggered by: ${{ github.actor }}
+                    - Commit: ${{ github.sha }}
+                    "
+                    
+                    git push
+                    echo "✅ Models committed and pushed!"
+                  fi
+
+            - name: Trigger service deployment
+              if: success()
+              run: |
+                  echo "🚀 Triggering service-xai-prediction deployment..."
+
+                  # This will trigger the trigger-jenkins.yml workflow
+                  # which will detect the model changes and deploy the service
+                  curl -X POST \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    https://api.github.com/repos/${{ github.repository }}/actions/workflows/trigger-jenkins.yml/dispatches \
+                    -d '{"ref":"${{ github.ref_name }}","inputs":{"services":"service-xai-prediction"}}'
+
+                  echo "✅ Deployment triggered!"
+
+    report-status:
+        needs:
+            [
+                train-xai-predictor,
+                train-engagement-predictor,
+                train-learning-style,
+                deploy-models,
+            ]
+        if: always()
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Generate summary
+              run: |
+                  echo "# 🧠 ML Pipeline Results" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+                  echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  echo "## Training Results" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "${{ needs.train-xai-predictor.result }}" != "skipped" ]; then
+                    if [ "${{ needs.train-xai-predictor.result }}" = "success" ]; then
+                      echo "- ✅ **XAI Predictor**: Successfully trained" >> $GITHUB_STEP_SUMMARY
+                    else
+                      echo "- ❌ **XAI Predictor**: Failed" >> $GITHUB_STEP_SUMMARY
+                    fi
+                  fi
+
+                  if [ "${{ needs.train-engagement-predictor.result }}" != "skipped" ]; then
+                    if [ "${{ needs.train-engagement-predictor.result }}" = "success" ]; then
+                      echo "- ✅ **Engagement Predictor**: Successfully trained" >> $GITHUB_STEP_SUMMARY
+                    else
+                      echo "- ❌ **Engagement Predictor**: Failed" >> $GITHUB_STEP_SUMMARY
+                    fi
+                  fi
+
+                  if [ "${{ needs.train-learning-style.result }}" != "skipped" ]; then
+                    if [ "${{ needs.train-learning-style.result }}" = "success" ]; then
+                      echo "- ✅ **Learning Style**: Successfully trained" >> $GITHUB_STEP_SUMMARY
+                    else
+                      echo "- ❌ **Learning Style**: Failed" >> $GITHUB_STEP_SUMMARY
+                    fi
+                  fi
+
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "${{ needs.deploy-models.result }}" = "success" ]; then
+                    echo "## 🚀 Deployment" >> $GITHUB_STEP_SUMMARY
+                    echo "✅ Models deployed to service-xai-prediction" >> $GITHUB_STEP_SUMMARY
+                  elif [ "${{ needs.deploy-models.result }}" = "failure" ]; then
+                    echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+                  fi

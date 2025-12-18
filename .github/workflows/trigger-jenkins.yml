@@ -1,0 +1,141 @@
+name: Trigger Jenkins Deployment
+
+on:
+    push:
+        branches: [main, develop]
+        paths:
+            - "backend/services/**"
+    workflow_dispatch:
+        inputs:
+            services:
+                description: "Comma-separated services to deploy (e.g., user-service,course-service)"
+                required: false
+
+jobs:
+    detect-changes:
+        runs-on: ubuntu-latest
+        outputs:
+            changed-services: ${{ steps.changes.outputs.changed-services }}
+            branch: ${{ steps.branch.outputs.name }}
+
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Get branch name
+              id: branch
+              run: echo "name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+            - uses: dorny/paths-filter@v2
+              id: filter
+              with:
+                  list-files: "json"
+                  filters: |
+                      user-service:
+                        - 'backend/services/user-service/**'
+                      course-service:
+                        - 'backend/services/course-service/**'
+                      assessment-service:
+                        - 'backend/services/assessment-service/**'
+                      service-xai-prediction:
+                        - 'backend/services/service-xai-prediction/**'
+                      service-learning-style:
+                        - 'backend/services/service-learning-style/**'
+                      service-engagement-tracker:
+                        - 'backend/services/service-engagement-tracker/**'
+
+            - name: Build changed services list
+              id: changes
+              run: |
+                  if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.services }}" ]; then
+                    # Manual trigger with specific services
+                    SERVICES="${{ github.event.inputs.services }}"
+                  else
+                    # Automatic trigger - detect changed services
+                    SERVICES=""
+                    
+                    if [ "${{ steps.filter.outputs.user-service }}" = "true" ]; then
+                      SERVICES="user-service"
+                    fi
+                    if [ "${{ steps.filter.outputs.course-service }}" = "true" ]; then
+                      SERVICES="${SERVICES:+$SERVICES,}course-service"
+                    fi
+                    if [ "${{ steps.filter.outputs.assessment-service }}" = "true" ]; then
+                      SERVICES="${SERVICES:+$SERVICES,}assessment-service"
+                    fi
+                    if [ "${{ steps.filter.outputs.service-xai-prediction }}" = "true" ]; then
+                      SERVICES="${SERVICES:+$SERVICES,}service-xai-prediction"
+                    fi
+                    if [ "${{ steps.filter.outputs.service-learning-style }}" = "true" ]; then
+                      SERVICES="${SERVICES:+$SERVICES,}service-learning-style"
+                    fi
+                    if [ "${{ steps.filter.outputs.service-engagement-tracker }}" = "true" ]; then
+                      SERVICES="${SERVICES:+$SERVICES,}service-engagement-tracker"
+                    fi
+                  fi
+
+                  echo "changed-services=$SERVICES" >> $GITHUB_OUTPUT
+                  echo "Services to deploy: $SERVICES"
+
+    trigger-jenkins:
+        needs: detect-changes
+        if: needs.detect-changes.outputs.changed-services != ''
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Trigger Jenkins Job
+              run: |
+                  SERVICES="${{ needs.detect-changes.outputs.changed-services }}"
+                  BRANCH="${{ needs.detect-changes.outputs.branch }}"
+                  COMMIT="${{ github.sha }}"
+                  TRIGGERED_BY="${{ github.actor }}"
+
+                  echo "Triggering Jenkins deployment..."
+                  echo "Branch: $BRANCH"
+                  echo "Commit: $COMMIT"
+                  echo "Services: $SERVICES"
+                  echo "Triggered by: $TRIGGERED_BY"
+
+                  # Trigger Jenkins job via webhook
+                  curl -X POST "${{ secrets.JENKINS_URL }}/job/edumind-deploy/buildWithParameters" \
+                    --user "${{ secrets.JENKINS_USER }}:${{ secrets.JENKINS_TOKEN }}" \
+                    --data-urlencode "BRANCH_NAME=$BRANCH" \
+                    --data-urlencode "GIT_COMMIT=$COMMIT" \
+                    --data-urlencode "CHANGED_SERVICES=$SERVICES" \
+                    --data-urlencode "TRIGGERED_BY=$TRIGGERED_BY" \
+                    --data-urlencode "token=${{ secrets.JENKINS_BUILD_TOKEN }}"
+
+                  echo "✅ Jenkins deployment triggered successfully!"
+
+            - name: Comment on commit
+              if: success()
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const services = '${{ needs.detect-changes.outputs.changed-services }}';
+                      const branch = '${{ needs.detect-changes.outputs.branch }}';
+                      const servicesList = services.split(',').map(s => `- ${s}`).join('\n');
+
+                      github.rest.repos.createCommitComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        commit_sha: context.sha,
+                        body: `🚀 **Jenkins Deployment Triggered**\n\n` +
+                              `**Branch:** ${branch}\n` +
+                              `**Services:**\n${servicesList}\n\n` +
+                              `Monitor progress: ${{ secrets.JENKINS_URL }}/job/edumind-deploy/`
+                      });
+
+            - name: Notify on failure
+              if: failure()
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      github.rest.repos.createCommitComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        commit_sha: context.sha,
+                        body: `❌ **Jenkins Deployment Failed to Trigger**\n\n` +
+                              `Check GitHub Actions logs for details.`
+                      });

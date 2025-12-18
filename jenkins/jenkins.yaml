@@ -1,0 +1,238 @@
+jenkins:
+  systemMessage: "EduMind CI/CD  - Deployment Pipeline"
+  
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer:${JENKINS_ADMIN_USER}"
+        - "Overall/Read:authenticated"
+  
+  remotingSecurity:
+    enabled: true
+
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: false
+
+  # Agent configuration
+  numExecutors: 2
+  mode: NORMAL
+  
+  # Global properties
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "AZURE_SUBSCRIPTION_ID"
+            value: "${AZURE_SUBSCRIPTION_ID}"
+          - key: "AZURE_TENANT_ID"
+            value: "${AZURE_TENANT_ID}"
+          - key: "ACR_NAME"
+            value: "${ACR_NAME}"
+
+# Credentials configuration
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # Azure Service Principal
+          - usernamePassword:
+              scope: GLOBAL
+              id: "AZURE_SERVICE_PRINCIPAL"
+              username: "${AZURE_CLIENT_ID}"
+              password: "${AZURE_CLIENT_SECRET}"
+              description: "Azure Service Principal for deployments"
+          
+          # Azure Container Registry
+          - usernamePassword:
+              scope: GLOBAL
+              id: "ACR_CREDENTIALS"
+              username: "${ACR_USERNAME}"
+              password: "${ACR_PASSWORD}"
+              description: "Azure Container Registry credentials"
+          
+          # GitHub token
+          - string:
+              scope: GLOBAL
+              id: "GITHUB_TOKEN"
+              secret: "${GITHUB_TOKEN}"
+              description: "GitHub Personal Access Token"
+          
+          # Individual Azure credentials as strings
+          - string:
+              scope: GLOBAL
+              id: "AZURE_SUBSCRIPTION_ID"
+              secret: "${AZURE_SUBSCRIPTION_ID}"
+              description: "Azure Subscription ID"
+          
+          - string:
+              scope: GLOBAL
+              id: "AZURE_TENANT_ID"
+              secret: "${AZURE_TENANT_ID}"
+              description: "Azure Tenant ID"
+          
+          - string:
+              scope: GLOBAL
+              id: "AZURE_CLIENT_ID"
+              secret: "${AZURE_CLIENT_ID}"
+              description: "Azure Client ID"
+          
+          - string:
+              scope: GLOBAL
+              id: "AZURE_CLIENT_SECRET"
+              secret: "${AZURE_CLIENT_SECRET}"
+              description: "Azure Client Secret"
+          
+          - string:
+              scope: GLOBAL
+              id: "ACR_NAME"
+              secret: "${ACR_NAME}"
+              description: "Azure Container Registry Name"
+          
+          - string:
+              scope: GLOBAL
+              id: "ACR_USERNAME"
+              secret: "${ACR_USERNAME}"
+              description: "ACR Username"
+          
+          - string:
+              scope: GLOBAL
+              id: "ACR_PASSWORD"
+              secret: "${ACR_PASSWORD}"
+              description: "ACR Password"
+
+# Job configuration
+jobs:
+  - script: >
+      pipelineJob('edumind-deploy') {
+        description('EduMind Backend Services Deployment Pipeline - Strategy 2')
+        
+        parameters {
+          stringParam('BRANCH_NAME', 'develop', 'Git branch to deploy')
+          stringParam('GIT_COMMIT', '', 'Git commit SHA')
+          stringParam('CHANGED_SERVICES', '', 'Comma-separated services to deploy')
+          stringParam('TRIGGERED_BY', 'manual', 'Who triggered the deployment')
+        }
+        
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/your-org/edumind.git')
+                  credentials('GITHUB_TOKEN')
+                }
+                branches('*/${BRANCH_NAME}')
+              }
+            }
+            scriptPath('backend/Jenkinsfile')
+            lightweight(true)
+          }
+        }
+        
+        properties {
+          pipelineTriggers {
+            triggers {
+              GenericTrigger {
+                genericVariables {
+                  genericVariable {
+                    key("BRANCH_NAME")
+                    value("\$.branch")
+                  }
+                  genericVariable {
+                    key("GIT_COMMIT")
+                    value("\$.commit")
+                  }
+                  genericVariable {
+                    key("CHANGED_SERVICES")
+                    value("\$.services")
+                  }
+                  genericVariable {
+                    key("TRIGGERED_BY")
+                    value("\$.actor")
+                  }
+                }
+                
+                causeString('Triggered by GitHub Actions: $TRIGGERED_BY')
+                
+                token('${JENKINS_BUILD_TOKEN}')
+                
+                printContributedVariables(true)
+                printPostContent(true)
+              }
+            }
+          }
+        }
+      }
+
+# Tool installations
+tool:
+  git:
+    installations:
+      - name: "Default"
+        home: "git"
+  
+  dockerTool:
+    installations:
+      - name: "docker"
+        properties:
+          - installSource:
+              installers:
+                - fromDocker:
+                    version: "latest"
+
+# Plugin configuration
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+  
+  gitHubPluginConfig:
+    configs:
+      - name: "GitHub"
+        credentialsId: "GITHUB_TOKEN"
+  
+  timestamperConfig:
+    allPipelines: true
+  
+  ansiColorBuildWrapper:
+    colorMapName: "xterm"
+
+# Plugin installations
+plugins:
+  required:
+    # SCM
+    - git:latest
+    - github:latest
+    - github-branch-source:latest
+    
+    # Pipeline
+    - workflow-aggregator:latest
+    - pipeline-stage-view:latest
+    - pipeline-graph-analysis:latest
+    
+    # Docker
+    - docker-workflow:latest
+    - docker-plugin:latest
+    
+    # Credentials
+    - credentials:latest
+    - credentials-binding:latest
+    - plain-credentials:latest
+    
+    # Triggers
+    - generic-webhook-trigger:latest
+    
+    # Utilities
+    - timestamper:latest
+    - ansicolor:latest
+    - build-timeout:latest
+    - ws-cleanup:latest
+    
+    # Configuration as Code
+    - configuration-as-code:latest

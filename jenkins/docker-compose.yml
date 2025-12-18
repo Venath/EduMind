@@ -1,0 +1,125 @@
+version: "3.8"
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: edumind-jenkins
+    restart: unless-stopped
+    privileged: true
+    user: root
+
+    ports:
+      - "8080:8080" # Jenkins UI
+      - "50000:50000" # Agent communication
+
+    volumes:
+      # Jenkins home directory
+      - jenkins_home:/var/jenkins_home
+
+      # Docker socket for building images
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # Jenkins configuration as code
+      - ./jenkins.yaml:/var/jenkins_home/casc_configs/jenkins.yaml:ro
+
+      # Workspace for builds
+      - jenkins_workspace:/var/jenkins_home/workspace
+
+    environment:
+      # Jenkins Configuration as Code
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/jenkins.yaml
+
+      # Java options
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false -Xmx2048m -Xms512m
+
+      # Azure credentials (set these in .env file)
+      - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+
+      # ACR credentials
+      - ACR_NAME=${ACR_NAME}
+      - ACR_USERNAME=${ACR_USERNAME}
+      - ACR_PASSWORD=${ACR_PASSWORD}
+
+      # Jenkins admin credentials
+      - JENKINS_ADMIN_USER=${JENKINS_ADMIN_USER:-admin}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD:-admin}
+
+      # GitHub token for webhook triggers
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    networks:
+      - jenkins-network
+      - backend-network # Connect to backend services if needed
+
+  # Install Azure CLI, Docker, and other tools
+  jenkins-agent:
+    image: jenkins/jenkins:lts
+    container_name: jenkins-agent-setup
+    user: root
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        # Install Docker CLI
+        apt-get update
+        apt-get install -y \
+          apt-transport-https \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release
+
+        curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        apt-get update
+        apt-get install -y docker-ce-cli
+
+        # Install Azure CLI
+        curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+        # Install additional tools
+        apt-get install -y \
+          git \
+          jq \
+          unzip \
+          wget
+
+        echo "✅ Jenkins agent setup complete!"
+        tail -f /dev/null
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - jenkins_tools:/usr/local/bin
+
+    networks:
+      - jenkins-network
+
+    depends_on:
+      - jenkins
+
+volumes:
+  jenkins_home:
+    driver: local
+  jenkins_workspace:
+    driver: local
+  jenkins_tools:
+    driver: local
+
+networks:
+  jenkins-network:
+    driver: bridge
+  backend-network:
+    external: true
+    name: edumind-backend-network
