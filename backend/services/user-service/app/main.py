@@ -1,8 +1,8 @@
+from app.api import routes
+from app.core.config import settings
+from app.core.logging import configure_logging, get_logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.logging import configure_logging, get_logger
-from app.core.config import settings
-from app.api import routes
 
 # Configure logging
 configure_logging(log_level=settings.LOG_LEVEL)
@@ -17,7 +17,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, use settings.ALLOWED_ORIGINS
+    allow_origins=["*"],  # In production, use settings.ALLOWED_ORIGINS
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,6 +25,7 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(routes.router, prefix=settings.API_V1_STR)
+
 
 @app.get("/health")
 async def health_check():

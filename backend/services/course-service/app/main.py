@@ -1,8 +1,9 @@
+from typing import Optional
+
+from app.core.logging import configure_logging, get_logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic_settings import BaseSettings
-from typing import Optional
-from app.core.logging import configure_logging, get_logger
 
 
 class Settings(BaseSettings):
@@ -12,7 +13,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     DATABASE_URL: Optional[str] = None
     SECRET_KEY: str = "dev-secret-key"
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = True
@@ -31,6 +32,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/health")
 async def health_check():

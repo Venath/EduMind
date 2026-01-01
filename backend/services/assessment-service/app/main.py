@@ -1,4 +1,5 @@
 """Assessment Service - FastAPI application"""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,7 +8,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
 )
 
 # CORS
@@ -19,13 +20,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"service": "Assessment Service", "status": "running"}
 
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "assessment-service"}
+
 
 @app.get("/api/v1/assessments")
 async def get_assessments():

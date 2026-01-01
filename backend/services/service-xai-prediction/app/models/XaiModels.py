@@ -1,8 +1,10 @@
-from pydantic import BaseModel, Field
-from typing import List, Dict
 from datetime import datetime
-from uuid import UUID, uuid4
 from enum import Enum
+from typing import Dict, List
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field
+
 
 class RiskLevel(str, Enum):
     LOW = "low"
@@ -10,11 +12,13 @@ class RiskLevel(str, Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
+
 class PredictionRequest(BaseModel):
     """Request schema for student outcome prediction"""
+
     student_id: UUID
     features: Dict[str, float]
-    
+
     model_config = {
         "json_schema_extra": {
             "example": {
@@ -29,21 +33,25 @@ class PredictionRequest(BaseModel):
                     "age_band": 2,
                     "num_of_prev_attempts": 0,
                     "studied_credits": 120,
-                    "disability": 0
-                }
+                    "disability": 0,
+                },
             }
         }
     }
 
+
 class FeatureImportance(BaseModel):
     """Feature importance details"""
+
     feature_name: str
     importance: float
     shap_value: float
     contribution: str
 
+
 class Explanation(BaseModel):
     """Explanation schema for XAI predictions"""
+
     id: UUID = Field(default_factory=uuid4)
     prediction_result_id: UUID
     shap_values: Dict[str, float]
@@ -53,8 +61,10 @@ class Explanation(BaseModel):
     risk_factors: List[str]
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+
 class PredictionResult(BaseModel):
     """Prediction result schema"""
+
     id: UUID = Field(default_factory=uuid4)
     request_id: UUID
     student_id: UUID
@@ -64,7 +74,9 @@ class PredictionResult(BaseModel):
     risk_level: RiskLevel
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+
 class PredictionResponse(BaseModel):
     """Complete prediction response with explanation"""
+
     prediction: PredictionResult
     explanation: Explanation

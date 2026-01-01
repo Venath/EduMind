@@ -1,14 +1,16 @@
 import logging
 import sys
-import structlog
 from typing import Any
+
+import structlog
+
 
 def configure_logging(log_level: str = "INFO", json_format: bool = True) -> None:
     """
     Configure structured logging for the application.
     """
     level = getattr(logging, log_level.upper(), logging.INFO)
-    
+
     processors = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
@@ -36,6 +38,7 @@ def configure_logging(log_level: str = "INFO", json_format: bool = True) -> None
         stream=sys.stdout,
         level=level,
     )
+
 
 def get_logger(name: str) -> Any:
     """Get a structured logger instance"""

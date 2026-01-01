@@ -1,8 +1,10 @@
-from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import List, Optional
+
 from app.core.security import get_password_hash, verify_password
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
+from sqlalchemy.orm import Session
+
 
 class UserService:
     def get(self, db: Session, user_id: str) -> Optional[User]:
@@ -35,5 +37,6 @@ class UserService:
         if not verify_password(password, user.hashed_password):
             return None
         return user
+
 
 user_service = UserService()

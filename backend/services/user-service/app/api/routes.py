@@ -1,14 +1,15 @@
-from typing import List, Any
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from typing import Any, List
 
 from app.api import deps
+from app.core.security import create_access_token
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.services.user_service import user_service
-from app.core.security import create_access_token
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
 
 router = APIRouter()
+
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
@@ -28,6 +29,7 @@ def create_user(
     user = user_service.create(db, obj_in=user_in)
     return user
 
+
 @router.get("/users", response_model=List[UserResponse])
 def read_users(
     db: Session = Depends(deps.get_db),
@@ -39,6 +41,7 @@ def read_users(
     """
     users = user_service.get_multi(db, skip=skip, limit=limit)
     return users
+
 
 @router.post("/login/access-token")
 def login_access_token(
@@ -53,9 +56,11 @@ def login_access_token(
     )
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    
+
     # We can add more claims here (e.g. role)
     return {
-        "access_token": create_access_token(subject=user.id, secret_key="CHANGE_THIS_SECRET"), # TODO: Use config
+        "access_token": create_access_token(
+            subject=user.id, secret_key="CHANGE_THIS_SECRET"
+        ),  # TODO: Use config
         "token_type": "bearer",
     }

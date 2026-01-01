@@ -1,6 +1,7 @@
 from typing import Generator
-from app.db.base import get_db_session
+
 from app.core.config import settings
+from app.db.base import get_db_session
 
 # Handle optional DATABASE_URL
 if settings.DATABASE_URL:

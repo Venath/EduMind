@@ -91,17 +91,17 @@ jobs:
             - name: Train XAI Predictor
               working-directory: ml/models/xai_predictor
               run: |
-                  echo "🧠 Training XAI Predictor model..."
+                  echo "Training XAI Predictor model..."
                   python train.py
 
-                  echo "📊 Model training complete!"
+                  echo "Model training complete!"
                   echo "Model artifacts:"
                   ls -lh *.joblib 2>/dev/null || echo "No .joblib files found"
 
             - name: Validate model artifacts
               working-directory: ml/models/xai_predictor
               run: |
-                  echo "✅ Checking for required model files..."
+                  echo "Checking for required model files..."
 
                   required_files=(
                     "student_model_best.joblib"
@@ -120,12 +120,12 @@ jobs:
                   done
 
                   if [ ${#missing_files[@]} -gt 0 ]; then
-                    echo "❌ Missing required files:"
+                    echo "Missing required files:"
                     printf '%s\n' "${missing_files[@]}"
                     exit 1
                   fi
 
-                  echo "✅ All model artifacts present!"
+                  echo "All model artifacts present!"
 
             - name: Upload model artifacts
               uses: actions/upload-artifact@v4
@@ -145,7 +145,7 @@ jobs:
                   echo "xgb_size=$xgb_size" >> $GITHUB_OUTPUT
                   echo "total_size=$total_size" >> $GITHUB_OUTPUT
 
-                  echo "📦 Model sizes:"
+                  echo "Model sizes:"
                   echo "├─ XGBoost model: $xgb_size"
                   echo "└─ Total deployment: $total_size"
 
@@ -172,9 +172,9 @@ jobs:
             - name: Train Engagement Predictor
               working-directory: ml/models/engagement_predictor
               run: |
-                  echo "🎯 Training Engagement Predictor model..."
+                  echo "Training Engagement Predictor model..."
                   python train.py
-                  echo "✅ Engagement predictor training complete!"
+                  echo "Engagement predictor training complete!"
 
             - name: Upload artifacts
               uses: actions/upload-artifact@v4
@@ -206,9 +206,9 @@ jobs:
             - name: Train Learning Style Recognizer
               working-directory: ml/models/learning_style_recognizer
               run: |
-                  echo "🎨 Training Learning Style Recognizer model..."
+                  echo "Training Learning Style Recognizer model..."
                   python train.py
-                  echo "✅ Learning style recognizer training complete!"
+                  echo "Learning style recognizer training complete!"
 
             - name: Upload artifacts
               uses: actions/upload-artifact@v4
@@ -235,14 +235,14 @@ jobs:
 
             - name: Copy models to service
               run: |
-                  echo "📦 Copying trained models to service directory..."
+                  echo "Copying trained models to service directory..."
 
                   mkdir -p backend/services/service-xai-prediction/app/model
 
                   cp ml/models/xai_predictor/*.joblib \
                      backend/services/service-xai-prediction/app/model/
 
-                  echo "✅ Models copied successfully!"
+                  echo "Models copied successfully!"
                   ls -lh backend/services/service-xai-prediction/app/model/
 
             - name: Commit updated models
@@ -263,7 +263,7 @@ jobs:
                     "
                     
                     git push
-                    echo "✅ Models committed and pushed!"
+                    echo "Models committed and pushed!"
                   fi
 
             - name: Trigger service deployment
@@ -296,7 +296,7 @@ jobs:
         steps:
             - name: Generate summary
               run: |
-                  echo "# 🧠 ML Pipeline Results" >> $GITHUB_STEP_SUMMARY
+                  echo "# ML Pipeline Results" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
                   echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
@@ -308,33 +308,33 @@ jobs:
 
                   if [ "${{ needs.train-xai-predictor.result }}" != "skipped" ]; then
                     if [ "${{ needs.train-xai-predictor.result }}" = "success" ]; then
-                      echo "- ✅ **XAI Predictor**: Successfully trained" >> $GITHUB_STEP_SUMMARY
+                      echo "- **XAI Predictor**: Successfully trained" >> $GITHUB_STEP_SUMMARY
                     else
-                      echo "- ❌ **XAI Predictor**: Failed" >> $GITHUB_STEP_SUMMARY
+                      echo "- **XAI Predictor**: Failed" >> $GITHUB_STEP_SUMMARY
                     fi
                   fi
 
                   if [ "${{ needs.train-engagement-predictor.result }}" != "skipped" ]; then
                     if [ "${{ needs.train-engagement-predictor.result }}" = "success" ]; then
-                      echo "- ✅ **Engagement Predictor**: Successfully trained" >> $GITHUB_STEP_SUMMARY
+                      echo "-**Engagement Predictor**: Successfully trained" >> $GITHUB_STEP_SUMMARY
                     else
-                      echo "- ❌ **Engagement Predictor**: Failed" >> $GITHUB_STEP_SUMMARY
+                      echo "- **Engagement Predictor**: Failed" >> $GITHUB_STEP_SUMMARY
                     fi
                   fi
 
                   if [ "${{ needs.train-learning-style.result }}" != "skipped" ]; then
                     if [ "${{ needs.train-learning-style.result }}" = "success" ]; then
-                      echo "- ✅ **Learning Style**: Successfully trained" >> $GITHUB_STEP_SUMMARY
+                      echo "- **Learning Style**: Successfully trained" >> $GITHUB_STEP_SUMMARY
                     else
-                      echo "- ❌ **Learning Style**: Failed" >> $GITHUB_STEP_SUMMARY
+                      echo "- **Learning Style**: Failed" >> $GITHUB_STEP_SUMMARY
                     fi
                   fi
 
                   echo "" >> $GITHUB_STEP_SUMMARY
 
                   if [ "${{ needs.deploy-models.result }}" = "success" ]; then
-                    echo "## 🚀 Deployment" >> $GITHUB_STEP_SUMMARY
-                    echo "✅ Models deployed to service-xai-prediction" >> $GITHUB_STEP_SUMMARY
+                    echo "## Deployment" >> $GITHUB_STEP_SUMMARY
+                    echo "Models deployed to service-xai-prediction" >> $GITHUB_STEP_SUMMARY
                   elif [ "${{ needs.deploy-models.result }}" = "failure" ]; then
-                    echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+                    echo "## Deployment Failed" >> $GITHUB_STEP_SUMMARY
                   fi
