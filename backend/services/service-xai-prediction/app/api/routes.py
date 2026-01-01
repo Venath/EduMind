@@ -1,7 +1,11 @@
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.schemas import (HealthResponse, ModelInfoResponse, PredictionRequest,
-                         PredictionResponse)
+from app.schemas import (
+    HealthResponse,
+    ModelInfoResponse,
+    PredictionRequest,
+    PredictionResponse,
+)
 from app.Services.ml_service import ml_service
 from fastapi import APIRouter, HTTPException, status
 
