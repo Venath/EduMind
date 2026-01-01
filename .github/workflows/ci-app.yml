@@ -1,124 +1,45 @@
-name: CI - Quick Validation
+name: CI Validation
 
 on:
   pull_request:
     branches: [main, develop]
-    paths:
-      - 'backend/services/**'
-
-env:
-  PYTHON_VERSION: '3.9'
+  push:
+    branches: [main, develop]
 
 jobs:
-  detect-changed-services:
+  validate:
     runs-on: ubuntu-latest
-    outputs:
-      services: ${{ steps.changes.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          list-files: 'json'
-          filters: |
-            user-service:
-              - 'backend/services/user-service/**'
-            course-service:
-              - 'backend/services/course-service/**'
-            assessment-service:
-              - 'backend/services/assessment-service/**'
-            service-xai-prediction:
-              - 'backend/services/service-xai-prediction/**'
-            service-learning-style:
-              - 'backend/services/service-learning-style/**'
-            service-engagement-tracker:
-              - 'backend/services/service-engagement-tracker/**'
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Quick validation only - no deployment
-  quick-validation:
-    needs: detect-changed-services
-    if: needs.detect-changed-services.outputs.services != '[]'
-    strategy:
-      matrix:
-        service: ${{ fromJSON(needs.detect-changed-services.outputs.services) }}
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-          cache-dependency-path: backend/services/${{ matrix.service }}/requirements.txt
-      
+          python-version: '3.11'
+
       - name: Install dependencies
-        working-directory: backend/services/${{ matrix.service }}
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-asyncio httpx black isort flake8 safety bandit
-      
-      - name: Code Quality Checks
-        working-directory: backend/services/${{ matrix.service }}
-        run: |
-          echo "Running Black..."
-          black --check app/ tests/ || echo "::warning::Black formatting issues found"
-          
-          echo "Running isort..."
-          isort --check-only app/ tests/ || echo "::warning::Import sorting issues found"
-          
-          echo "Running Flake8..."
-          flake8 app/ tests/ --max-line-length=100 --ignore=E203,W503 || echo "::warning::Flake8 issues found"
-      
-      - name: Security Scanning
-        working-directory: backend/services/${{ matrix.service }}
-        run: |
-          echo "Running Safety check..."
-          safety check --json || echo "::warning::Dependency vulnerabilities found"
-          
-          echo "Running Bandit..."
-          bandit -r app/ -f json || echo "::warning::Security issues found"
-      
-      - name: Unit Tests
-        working-directory: backend/services/${{ matrix.service }}
-        run: |
-          if [ -d "tests" ]; then
-            echo "Running unit tests..."
-            pytest tests/ -v --cov=app --cov-report=term --maxfail=5
-          else
-            echo "No tests directory found"
-          fi
-        env:
-          PYTHONPATH: .
-          ENVIRONMENT: test
-      
-      - name: Comment PR with Results
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const service = '${{ matrix.service }}';
-            const conclusion = '${{ job.status }}';
-            const emoji = conclusion === 'success' ? '✅' : '❌';
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `${emoji} **${service}** validation ${conclusion}\n\n` +
-                    `Quick checks completed. ` +
-                    `Jenkins will handle full build and deployment on merge.`
-            });
+          pip install black isort flake8 pytest safety bandit
 
-  # Notify that validation passed
-  validation-complete:
-    needs: [detect-changed-services, quick-validation]
-    runs-on: ubuntu-latest
-    if: success()
-    
-    steps:
-      - name: Success notification
-        run: |
-          echo "All validations passed!"
-          echo "Merge this PR to trigger Jenkins deployment pipeline."
+      - name: Code formatting (Black)
+        run: black --check .
+
+      - name: Import sorting (isort)
+        run: isort --check-only .
+
+      - name: Linting (Flake8)
+        run: flake8 .
+
+      - name: Unit tests (pytest)
+        run: pytest
+
+      - name: Security scan (Safety)
+        run: safety check
+
+      - name: Security scan (Bandit)
+        run: bandit -r .
+
+      - name: PR status check
+        if: github.event_name == 'pull_request'
+        run: echo "PR validation complete."
