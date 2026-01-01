@@ -106,7 +106,7 @@ jobs:
                     --data-urlencode "TRIGGERED_BY=$TRIGGERED_BY" \
                     --data-urlencode "token=${{ secrets.JENKINS_BUILD_TOKEN }}"
 
-                  echo "✅ Jenkins deployment triggered successfully!"
+                  echo "Jenkins deployment triggered successfully!"
 
             - name: Comment on commit
               if: success()
@@ -136,6 +136,6 @@ jobs:
                         owner: context.repo.owner,
                         repo: context.repo.repo,
                         commit_sha: context.sha,
-                        body: `❌ **Jenkins Deployment Failed to Trigger**\n\n` +
+                        body: `**Jenkins Deployment Failed to Trigger**\n\n` +
                               `Check GitHub Actions logs for details.`
                       });
