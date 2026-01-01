@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field
-from typing import List, Dict
 from datetime import datetime
-from uuid import UUID, uuid4
 from enum import Enum
+from typing import Dict, List
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field
 
 
 class RiskLevel(str, Enum):

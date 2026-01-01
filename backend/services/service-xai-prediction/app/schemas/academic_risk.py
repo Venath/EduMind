@@ -2,10 +2,11 @@
 Academic Risk Prediction Schemas for OULAD Model
 """
 
-from pydantic import BaseModel, Field
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field
 
 
 class AcademicRiskRequest(BaseModel):

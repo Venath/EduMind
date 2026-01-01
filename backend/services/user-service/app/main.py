@@ -1,8 +1,8 @@
+from app.api import routes
+from app.core.config import settings
+from app.core.logging import configure_logging, get_logger
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.logging import configure_logging, get_logger
-from app.core.config import settings
-from app.api import routes
 
 # Configure logging
 configure_logging(log_level=settings.LOG_LEVEL)

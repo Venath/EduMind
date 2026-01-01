@@ -2,8 +2,9 @@
 Prediction Schemas for XAI Prediction Service
 """
 
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 
 
 class PredictionRequest(BaseModel):

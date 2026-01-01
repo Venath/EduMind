@@ -8,11 +8,12 @@ project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-import pytest
-import numpy as np
 from uuid import uuid4
-from app.Services.ml_service import ml_service
+
+import numpy as np
+import pytest
 from app.schemas.prediction import PredictionRequest, RiskLevel
+from app.Services.ml_service import ml_service
 
 
 class TestMLServiceInitialization:

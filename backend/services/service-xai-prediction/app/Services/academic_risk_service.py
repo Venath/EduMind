@@ -1,10 +1,10 @@
-import xgboost as xgb
-import numpy as np
 import json
+import logging
 from pathlib import Path
 from typing import List, Tuple
-import logging
 
+import numpy as np
+import xgboost as xgb
 from app.schemas.academic_risk import AcademicRiskRequest, AcademicRiskResponse
 
 logger = logging.getLogger(__name__)

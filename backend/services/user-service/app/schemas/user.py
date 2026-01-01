@@ -1,7 +1,8 @@
-from pydantic import BaseModel, EmailStr, UUID4
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
 from app.models.user import UserRole
+from pydantic import UUID4, BaseModel, EmailStr
 
 
 class UserBase(BaseModel):

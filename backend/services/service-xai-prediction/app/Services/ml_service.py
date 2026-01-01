@@ -3,20 +3,16 @@ ML Service for XAI Prediction
 A lightweight service that handles predictions and explanations
 """
 
-import numpy as np
 import json
-import joblib
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
 import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from app.schemas.prediction import (
-    PredictionRequest,
-    PredictionResult,
-    ExplanationResult,
-    FeatureContribution,
-)
+import joblib
+import numpy as np
 from app.core.config import settings
+from app.schemas.prediction import (ExplanationResult, FeatureContribution,
+                                    PredictionRequest, PredictionResult)
 
 logger = logging.getLogger(__name__)
 
