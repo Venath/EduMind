@@ -11,12 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import joblib
 import numpy as np
 from app.core.config import settings
-from app.schemas.prediction import (
-    ExplanationResult,
-    FeatureContribution,
-    PredictionRequest,
-    PredictionResult,
-)
+from app.schemas.prediction import (ExplanationResult, FeatureContribution,
+                                    PredictionRequest, PredictionResult)
 
 logger = logging.getLogger(__name__)
 

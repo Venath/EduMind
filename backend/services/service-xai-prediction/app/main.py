@@ -3,12 +3,9 @@ from contextlib import asynccontextmanager
 from app.api import routes
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
-from app.core.middleware import (
-    error_handler_middleware,
-    http_exception_handler,
-    logging_middleware,
-    validation_exception_handler,
-)
+from app.core.middleware import (error_handler_middleware,
+                                 http_exception_handler, logging_middleware,
+                                 validation_exception_handler)
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
