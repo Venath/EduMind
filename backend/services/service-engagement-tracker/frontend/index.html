@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMind Analytics - Student Engagement Intelligence</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="chart.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <path d="M24 4L6 14L24 24L42 14L24 4Z" stroke="url(#gradient)" stroke-width="3" stroke-linejoin="round"/>
+                        <path d="M6 24L24 34L42 24" stroke="url(#gradient)" stroke-width="3" stroke-linejoin="round"/>
+                        <path d="M6 34L24 44L42 34" stroke="url(#gradient)" stroke-width="3" stroke-linejoin="round"/>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#667eea"/>
+                                <stop offset="100%" style="stop-color:#764ba2"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>EduMind Analytics</h1>
+                    <p>Student Engagement Intelligence Platform</p>
+                </div>
+            </div>
+            <div class="system-badge" id="systemBadge">
+                <div class="badge-pulse"></div>
+                <span>System Online</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Stats Dashboard -->
+        <div class="stats-dashboard">
+            <div class="stat-card-modern" data-color="purple">
+                <div class="stat-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalStudents">--</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+            </div>
+
+            <div class="stat-card-modern" data-color="red">
+                <div class="stat-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="highRiskCount">--</div>
+                    <div class="stat-label">High Risk Students</div>
+                </div>
+            </div>
+
+            <div class="stat-card-modern" data-color="orange">
+                <div class="stat-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="lowEngagementCount">--</div>
+                    <div class="stat-label">Low Engagement</div>
+                </div>
+            </div>
+
+            <div class="stat-card-modern" data-color="green">
+                <div class="stat-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-value" id="avgEngagement">--</div>
+                    <div class="stat-label">Avg Engagement</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Lookup Section -->
+        <div class="lookup-section">
+            <div class="lookup-card">
+                <div class="lookup-header">
+                    <h2>Student Analytics Lookup</h2>
+                    <p>Enter a student ID to view comprehensive engagement analytics and predictions</p>
+                </div>
+
+                <div class="lookup-form">
+                    <div class="input-group-modern">
+                        <label for="studentInput">Student ID</label>
+                        <div class="input-with-icon">
+                            <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input 
+                                type="text" 
+                                id="studentInput" 
+                                class="modern-input" 
+                                placeholder="Type student ID (e.g., STU0001)"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="quick-select-section">
+                        <label>Quick Select Examples</label>
+                        <div class="quick-buttons">
+                            <button class="btn-quick" onclick="loadStudent('STU0001')">
+                                <span class="quick-icon">🌟</span>
+                                <span>High Performer</span>
+                            </button>
+                            <button class="btn-quick" onclick="loadStudent('STU0050')">
+                                <span class="quick-icon">📊</span>
+                                <span>Average</span>
+                            </button>
+                            <button class="btn-quick" onclick="loadStudent('STU0085')">
+                                <span class="quick-icon">⚠️</span>
+                                <span>At Risk</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary-modern" id="loadStudentBtn" onclick="loadStudentDashboard()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14"/>
+                            <path d="m12 5 7 7-7 7"/>
+                        </svg>
+                        <span>Load Student Dashboard</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Dashboard (Hidden by default) -->
+        <div id="studentDashboard" class="student-dashboard" style="display: none;">
+            <!-- Student Profile Card -->
+            <div class="profile-card-modern">
+                <div class="profile-header-modern">
+                    <div class="profile-avatar-modern">
+                        <span id="studentInitials">ST</span>
+                    </div>
+                    <div class="profile-info-modern">
+                        <h2 id="studentIdDisplay">STU0001</h2>
+                        <p id="studentMetadata">Last updated: --</p>
+                    </div>
+                    <div class="profile-badge" id="engagementBadge">
+                        <span class="badge-label">Engagement</span>
+                        <span class="badge-value" id="engagementLevel">--</span>
+                    </div>
+                </div>
+
+                <div class="profile-metrics">
+                    <div class="metric-item">
+                        <div class="metric-icon">📈</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Engagement Score</div>
+                            <div class="metric-value" id="engagementScore">--</div>
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Days Tracked</div>
+                            <div class="metric-value" id="daysTracked">--</div>
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-icon">⚡</div>
+                        <div class="metric-content">
+                            <div class="metric-label">Activity Level</div>
+                            <div class="metric-value" id="activityLevel">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction Card -->
+            <div class="prediction-card-modern">
+                <div class="prediction-header">
+                    <div class="prediction-icon" id="predictionIcon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3>AI Disengagement Prediction</h3>
+                        <p>Machine learning analysis based on behavioral patterns</p>
+                    </div>
+                </div>
+
+                <div class="prediction-result" id="predictionResult">
+                    <div class="prediction-status" id="predictionStatus">
+                        <span class="status-label">Risk Level:</span>
+                        <span class="status-value" id="riskLevel">--</span>
+                    </div>
+                    <div class="prediction-probability">
+                        <div class="probability-label">Disengagement Probability</div>
+                        <div class="probability-bar-container">
+                            <div class="probability-bar" id="probabilityBar" style="width: 0%">
+                                <span class="probability-value" id="probabilityValue">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prediction-factors" id="predictionFactors">
+                    <h4>Key Factors</h4>
+                    <div id="factorsList" class="factors-list"></div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="chart-card-modern">
+                    <h3>📊 Engagement Trend (Last 30 Days)</h3>
+                    <div class="chart-container">
+                        <canvas id="engagementChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card-modern">
+                    <h3>🎯 Activity Breakdown</h3>
+                    <div class="chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Metrics -->
+            <div class="detailed-metrics">
+                <h3>📈 Detailed Engagement Metrics</h3>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-card-icon">📚</div>
+                        <div class="metric-card-label">Content Views</div>
+                        <div class="metric-card-value" id="contentViews">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-icon">✅</div>
+                        <div class="metric-card-label">Assignments</div>
+                        <div class="metric-card-value" id="assignments">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-icon">📝</div>
+                        <div class="metric-card-label">Quiz Score</div>
+                        <div class="metric-card-value" id="quizScore">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-icon">💬</div>
+                        <div class="metric-card-label">Forum Posts</div>
+                        <div class="metric-card-value" id="forumPosts">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-icon">⏱️</div>
+                        <div class="metric-card-label">Time Spent</div>
+                        <div class="metric-card-value" id="timeSpent">--</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-card-icon">🔄</div>
+                        <div class="metric-card-label">Login Frequency</div>
+                        <div class="metric-card-value" id="loginFreq">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personalized Study Schedule Section -->
+            <div class="schedule-section">
+                <div class="schedule-header">
+                    <div>
+                        <h3>📅 Personalized Study Schedule</h3>
+                        <p>AI-generated weekly schedule based on your engagement patterns</p>
+                    </div>
+                    <button class="btn-primary-modern" id="generateScheduleBtn" onclick="generateSchedule()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                        <span>Generate Schedule</span>
+                    </button>
+                </div>
+
+                <!-- Schedule Summary -->
+                <div id="scheduleSummary" class="schedule-summary-card" style="display: none;">
+                    <div class="summary-header">
+                        <h4>Schedule Configuration</h4>
+                        <button class="btn-icon" onclick="toggleScheduleDetails()" id="toggleDetailsBtn" title="Show/Hide AI Reasoning">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="summary-content">
+                        <div class="summary-item">
+                            <span class="summary-label">Session Length:</span>
+                            <span class="summary-value" id="scheduleSessionLength">--</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Sessions Per Day:</span>
+                            <span class="summary-value" id="scheduleSessionsPerDay">--</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Daily Study Time:</span>
+                            <span class="summary-value" id="scheduleDailyMinutes">--</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Load Reduction:</span>
+                            <span class="summary-value" id="scheduleLoadReduction">--</span>
+                        </div>
+                    </div>
+                    <div id="scheduleReasoning" class="schedule-reasoning" style="display: none;">
+                        <h5>Why this schedule?</h5>
+                        <div id="reasoningContent"></div>
+                    </div>
+                </div>
+
+                <!-- Weekly Schedule -->
+                <div id="weeklySchedule" class="weekly-schedule-container" style="display: none;">
+                    <h4>Weekly Breakdown</h4>
+                    <div id="scheduleDays" class="schedule-days-grid"></div>
+                </div>
+
+                <!-- Schedule Loading State -->
+                <div id="scheduleLoading" class="schedule-loading" style="display: none;">
+                    <div class="loader-spinner"></div>
+                    <p>Generating personalized schedule...</p>
+                </div>
+
+                <!-- No Schedule State -->
+                <div id="noSchedule" class="no-schedule-message">
+                    <div class="no-schedule-icon">📅</div>
+                    <p>No schedule generated yet. Click "Generate Schedule" to create a personalized weekly study plan.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification">
+        <div class="toast-icon"></div>
+        <div class="toast-content">
+            <div class="toast-title" id="toastTitle">Success</div>
+            <div class="toast-message" id="toastMessage">Operation completed</div>
+        </div>
+        <button class="toast-close" id="toastClose">×</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="overlay-content">
+            <div class="loader-spinner-large"></div>
+            <p>Loading student data...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
