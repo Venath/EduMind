@@ -42,29 +42,14 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}Step 2: Starting Frontend...${NC}"
-cd ../../../apps/web
-
-# Install dependencies if needed
-if [ ! -d "node_modules" ]; then
-    echo "Installing frontend dependencies..."
-    pnpm install
-fi
-
-# Start frontend
-echo "Starting Vite dev server..."
-pnpm dev &
-FRONTEND_PID=$!
-
-echo ""
-echo -e "${GREEN}✅ Integration Complete!${NC}"
+echo -e "${GREEN}✅ Backend Started Successfully!${NC}"
 echo ""
 echo "Backend API:  http://localhost:8000"
 echo "API Docs:     http://localhost:8000/api/v1/docs"
-echo "Frontend:     http://localhost:5173"
+echo "Health Check: http://localhost:8000/health"
 echo ""
-echo "Press Ctrl+C to stop all services..."
+echo "Press Ctrl+C to stop the backend service..."
 
 # Wait for user interrupt
-trap "echo ''; echo 'Stopping services...'; kill $BACKEND_PID $FRONTEND_PID; exit" INT
+trap "echo ''; echo 'Stopping backend service...'; kill $BACKEND_PID; exit" INT
 wait
