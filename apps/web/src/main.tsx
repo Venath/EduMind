@@ -1,15 +1,15 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Route, Routes } from "react-router-dom"
 import "./index.css"
 
-import App from "./App"
 import AdminApp from "./AdminApp"
+import AdminSignin from "./AdminSignin"
+import App from "./App"
 import Engagement from "./Engagement"
 import LearningStyle from "./LearningStyle"
-import AdminSignin from "./AdminSignin"
-import UserSignin from "./UserSignin"
 import Navbar from "./Navbar"
+import UserSignin from "./UserSignin"
 import XAIPrediction from "./components/XAIPrediction"
 
 createRoot(document.getElementById("root")!).render(
