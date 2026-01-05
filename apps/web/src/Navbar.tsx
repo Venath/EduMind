@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import "./Navbar.css"
 
@@ -96,14 +96,28 @@ function Navbar() {
           </button>
           <button
             className="nav-link"
-            onClick={() => scrollToSection("analytics")}
+            onClick={() => navigate("/analytics")}
           >
             Analytics
           </button>
 
           <button
-            className="nav-button"
+            className="nav-link"
             onClick={() => navigate("/engagement")}
+          >
+            Engagement
+          </button>
+
+          <button
+            className="nav-link"
+            onClick={() => navigate("/learning-style")}
+          >
+            Learning Style
+          </button>
+
+          <button
+            className="nav-button"
+            onClick={() => navigate("/")}
           >
             Get Started
           </button>

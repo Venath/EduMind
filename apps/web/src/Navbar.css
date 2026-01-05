@@ -1,7 +1,9 @@
+Lines changed: 184 additions & 0 deletions
+Original file line number	Original file line	Diff line number	Diff line change
+@@ -0,0 +1,184 @@
 /* ============================= */
 /* Navigation Bar */
 /* ============================= */
-
 .navbar {
   position: fixed;
   top: 0;
@@ -13,11 +15,9 @@
   border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
   z-index: 1000;
 }
-
 /* ============================= */
 /* Container */
 /* ============================= */
-
 .nav-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -27,11 +27,9 @@
   align-items: center;
   justify-content: space-between;
 }
-
 /* ============================= */
 /* Logo */
 /* ============================= */
-
 .nav-logo {
   display: flex;
   align-items: center;
@@ -41,22 +39,18 @@
   color: #ffffff;
   cursor: pointer;
 }
-
 .logo-icon {
   display: flex;
   align-items: center;
 }
-
 /* ============================= */
 /* Nav Links */
 /* ============================= */
-
 .nav-links {
   display: flex;
   align-items: center;
   gap: 2rem;
 }
-
 .nav-link {
   background: none;
   border: none;
@@ -67,15 +61,12 @@
   padding: 0.5rem 0;
   transition: color 0.2s ease;
 }
-
 .nav-link:hover {
   color: #ffffff;
 }
-
 /* ============================= */
 /* Primary Button */
 /* ============================= */
-
 .nav-button {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #ffffff;
@@ -87,20 +78,16 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
 }
-
 .nav-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(102, 126, 234, 0.45);
 }
-
 /* ============================= */
 /* Profile Icon */
 /* ============================= */
-
 .nav-profile-wrapper {
   position: relative;
 }
-
 .nav-profile-icon {
   width: 40px;
   height: 40px;
@@ -114,18 +101,15 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
 .nav-profile-icon:hover {
   background: rgba(102, 126, 234, 0.25);
   border-color: rgba(102, 126, 234, 0.5);
   transform: scale(1.08);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
 }
-
 /* ============================= */
 /* Dropdown */
 /* ============================= */
-
 .profile-dropdown {
   position: absolute;
   top: 48px;
@@ -139,7 +123,6 @@
   animation: dropdownFade 0.15s ease-out;
   z-index: 2000;
 }
-
 @keyframes dropdownFade {
   from {
     opacity: 0;
@@ -150,7 +133,6 @@
     transform: translateY(0);
   }
 }
-
 .dropdown-item {
   width: 100%;
   background: none;
@@ -163,21 +145,17 @@
   cursor: pointer;
   transition: background 0.15s ease;
 }
-
 .dropdown-item:hover {
   background: rgba(102, 126, 234, 0.15);
   color: #ffffff;
 }
-
 /* ============================= */
 /* Responsive */
 /* ============================= */
-
 @media (max-width: 900px) {
   .nav-links {
     gap: 1.25rem;
   }
-
   .nav-link {
     font-size: 0.9rem;
   }
