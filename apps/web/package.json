@@ -11,8 +11,13 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@types/react-router-dom": "^5.3.3",
+    "chart.js": "^4.5.1",
+    "lucide-react": "^0.562.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.11.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
