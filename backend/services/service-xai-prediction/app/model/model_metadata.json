@@ -1,0 +1,93 @@
+{
+  "feature_names": [
+    "avg_grade",
+    "grade_consistency",
+    "grade_range",
+    "num_assessments",
+    "assessment_completion_rate",
+    "studied_credits",
+    "num_of_prev_attempts",
+    "low_performance",
+    "low_engagement",
+    "has_previous_attempts"
+  ],
+  "feature_count": 10,
+  "model_type": "XGBClassifier",
+  "classes": [
+    "Safe",
+    "At-Risk"
+  ],
+  "training_samples": 26074,
+  "test_samples": 6519,
+  "metrics": {
+    "accuracy": 0.8630157999693204,
+    "precision": 0.9177318911832186,
+    "recall": 0.8134805345729227,
+    "f1": 0.862467272447251
+  },
+  "trained_at": "2026-01-04T03:48:20.878723",
+  "min_accuracy_threshold": 0.8,
+  "max_assessments": 28.0,
+  "feature_ranges": {
+    "avg_grade": {
+      "min": 0.0,
+      "max": 100.0,
+      "mean": 59.76291824808463,
+      "std": 31.27489566121967
+    },
+    "grade_consistency": {
+      "min": 29.9964286625318,
+      "max": 100.0,
+      "mean": 89.55898602025468,
+      "std": 8.913078708167557
+    },
+    "grade_range": {
+      "min": 0.0,
+      "max": 100.0,
+      "mean": 27.95623993249981,
+      "std": 23.65484808464278
+    },
+    "num_assessments": {
+      "min": 0.0,
+      "max": 26.0,
+      "mean": 6.3427552351001,
+      "std": 5.058442615379662
+    },
+    "assessment_completion_rate": {
+      "min": 0.0,
+      "max": 0.9285714285714286,
+      "mean": 0.22652697268214636,
+      "std": 0.1806586648349879
+    },
+    "studied_credits": {
+      "min": 30.0,
+      "max": 655.0,
+      "mean": 79.87535475953057,
+      "std": 41.092591053659035
+    },
+    "num_of_prev_attempts": {
+      "min": 0.0,
+      "max": 6.0,
+      "mean": 0.1634962031142134,
+      "std": 0.4804311468232284
+    },
+    "low_performance": {
+      "min": 0.0,
+      "max": 1.0,
+      "mean": 0.20691109917925904,
+      "std": 0.4050989879530365
+    },
+    "low_engagement": {
+      "min": 0.0,
+      "max": 1.0,
+      "mean": 0.5,
+      "std": 0.5000095883712242
+    },
+    "has_previous_attempts": {
+      "min": 0.0,
+      "max": 1.0,
+      "mean": 0.1282887167293089,
+      "std": 0.33441742034212946
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# Airflow - ignore logs and temp files
+logs/
+*.pyc
+__pycache__/
+.env

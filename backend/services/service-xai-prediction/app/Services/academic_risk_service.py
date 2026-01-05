@@ -33,14 +33,15 @@ class AcademicRiskService:
                 self._setup_demo_mode()
                 return
 
-            # Load XGBoost model
+            # Load XGBoost model using Booster API
             model_path = base_path / "academic_risk_model.json"
             if not model_path.exists():
                 logger.warning(f"Model file not found: {model_path}")
                 self._setup_demo_mode()
                 return
 
-            self.model = xgb.XGBClassifier()
+            # Load as Booster (raw model)
+            self.model = xgb.Booster()
             self.model.load_model(str(model_path))
             logger.info("✓ OULAD model loaded successfully")
 
@@ -93,8 +94,8 @@ class AcademicRiskService:
         }
         logger.info("Running academic risk service in demo mode")
 
-    def _prepare_features(self, request: AcademicRiskRequest) -> np.ndarray:
-        """Prepare features in correct order for model"""
+    def _prepare_features(self, request: AcademicRiskRequest) -> xgb.DMatrix:
+        """Prepare features as DMatrix for XGBoost Booster"""
         features = np.array(
             [
                 [
@@ -111,61 +112,95 @@ class AcademicRiskService:
                 ]
             ]
         )
-        return features
+        # Create DMatrix with feature names
+        return xgb.DMatrix(features, feature_names=self.feature_names)
 
     def _generate_recommendations(
-        self, request: AcademicRiskRequest, prediction: int
+        self, request: AcademicRiskRequest, prediction: int, risk_score: float
     ) -> List[str]:
         """Generate personalized recommendations based on risk level"""
         recommendations = []
 
-        if prediction == 1:  # At-Risk
-            if request.avg_grade < 50:
-                recommendations.append(
-                    f"Seek immediate tutoring - current grade ({request.avg_grade:.1f}%) is critically low"
-                )
-            elif request.avg_grade < 60:
-                recommendations.append(
-                    f"Improve study strategies - grade ({request.avg_grade:.1f}%) is below average"
-                )
-
-            if request.num_assessments < 5:
-                recommendations.append(
-                    f"Complete all remaining assessments - only {request.num_assessments} completed"
-                )
-
-            if request.has_previous_attempts == 1:
-                recommendations.append(
-                    "Address knowledge gaps from previous course attempts"
-                )
-
-            if request.low_performance == 1:
-                recommendations.append("Consider reducing course load if overwhelmed")
-
-            recommendations.append("Contact academic advisor immediately")
-            recommendations.append("Join study groups or tutoring sessions")
-
-        else:  # Safe
+        if prediction == 2:  # At-Risk
+            # Critical interventions
             recommendations.append(
-                f"Maintain current performance (grade: {request.avg_grade:.1f}%)"
+                f"[URGENT] Grade {request.avg_grade:.1f}% requires immediate action"
             )
-            recommendations.append("Help struggling peers through peer mentoring")
+            recommendations.append(
+                "Schedule emergency meeting with academic advisor TODAY"
+            )
+            recommendations.append(
+                "Contact student support services immediately"
+            )
+            recommendations.append(
+                "Attend ALL remaining classes and support sessions"
+            )
+            recommendations.append(
+                "Dedicate minimum 15-20 hours/week to this course"
+            )
+            recommendations.append(
+                "Get a study buddy or peer mentor assigned"
+            )
+            recommendations.append(
+                "Focus on completing ALL remaining assessments"
+            )
+            recommendations.append(
+                "Consider academic skills workshops (time management, study techniques)"
+            )
 
-            if request.avg_grade < 80:
-                recommendations.append("Aim for distinction level (80%+)")
+        elif prediction == 1:  # Medium Risk
+            recommendations.append(
+                f"[WARNING] Current grade {request.avg_grade:.1f}% - aim to improve to 70%+"
+            )
+            recommendations.append(
+                "Schedule regular check-ins with your tutor (weekly)"
+            )
+            recommendations.append(
+                "Join study groups for collaborative learning"
+            )
+            recommendations.append(
+                "Create a structured study schedule and stick to it"
+            )
+            recommendations.append(
+                "Focus on completing all remaining assessments"
+            )
+            recommendations.append(
+                "Review and revise topics where you scored lowest"
+            )
+            recommendations.append(
+                "Attend all available support sessions and office hours"
+            )
 
-            recommendations.append("Explore advanced learning materials")
-            recommendations.append("Maintain consistent study habits")
+        else:  # Safe (prediction == 0)
+            recommendations.append(
+                f"[SUCCESS] Excellent work! Maintain current performance (grade: {request.avg_grade:.1f}%)"
+            )
+            recommendations.append(
+                "Continue completing all assessments on time"
+            )
+            recommendations.append(
+                "Work on maintaining consistency across assessments"
+            )
+            recommendations.append(
+                "Consider helping peers through peer mentoring"
+            )
+            recommendations.append(
+                "Explore advanced learning materials and challenges"
+            )
+            recommendations.append(
+                "Aim for distinction level (80%+) performance"
+            )
 
         return recommendations
 
     def _get_top_risk_factors(
         self, request: AcademicRiskRequest, prediction: int
     ) -> List[dict]:
-        """Identify top risk factors"""
+        """Identify top risk factors for all risk levels"""
         factors = []
 
         if prediction == 1:  # At-Risk
+            # Critical and high-impact factors
             if request.avg_grade < 50:
                 factors.append(
                     {
@@ -203,7 +238,137 @@ class AcademicRiskService:
 
             if request.low_engagement == 1:
                 factors.append(
+                    {"feature": "low_engagement", "value": 1, "impact": "high"}
+                )
+
+            if request.grade_consistency < 70:
+                factors.append(
+                    {
+                        "feature": "grade_consistency",
+                        "value": request.grade_consistency,
+                        "impact": "medium",
+                    }
+                )
+
+            if request.assessment_completion_rate < 0.7:
+                factors.append(
+                    {
+                        "feature": "assessment_completion_rate",
+                        "value": request.assessment_completion_rate,
+                        "impact": "medium",
+                    }
+                )
+
+        elif prediction == 0:  # Medium Risk
+            # Monitor these areas for potential improvement
+            if 60 <= request.avg_grade < 70:
+                factors.append(
+                    {
+                        "feature": "avg_grade",
+                        "value": request.avg_grade,
+                        "impact": "medium",
+                    }
+                )
+
+            if request.grade_consistency < 80:
+                factors.append(
+                    {
+                        "feature": "grade_consistency",
+                        "value": request.grade_consistency,
+                        "impact": "medium",
+                    }
+                )
+
+            if request.num_assessments < 8:
+                factors.append(
+                    {
+                        "feature": "num_assessments",
+                        "value": request.num_assessments,
+                        "impact": "medium",
+                    }
+                )
+
+            if request.assessment_completion_rate < 0.8:
+                factors.append(
+                    {
+                        "feature": "assessment_completion_rate",
+                        "value": request.assessment_completion_rate,
+                        "impact": "medium",
+                    }
+                )
+
+            if request.low_engagement == 1:
+                factors.append(
                     {"feature": "low_engagement", "value": 1, "impact": "medium"}
+                )
+
+            if request.has_previous_attempts == 1:
+                factors.append(
+                    {
+                        "feature": "previous_attempts",
+                        "value": request.num_of_prev_attempts,
+                        "impact": "low",
+                    }
+                )
+
+        else:  # Safe (prediction == 2)
+            # Highlight strengths and areas to maintain
+            if request.avg_grade >= 70:
+                factors.append(
+                    {
+                        "feature": "avg_grade",
+                        "value": request.avg_grade,
+                        "impact": "strength",
+                    }
+                )
+
+            if request.grade_consistency >= 85:
+                factors.append(
+                    {
+                        "feature": "grade_consistency",
+                        "value": request.grade_consistency,
+                        "impact": "strength",
+                    }
+                )
+
+            if request.assessment_completion_rate >= 0.85:
+                factors.append(
+                    {
+                        "feature": "assessment_completion_rate",
+                        "value": request.assessment_completion_rate,
+                        "impact": "strength",
+                    }
+                )
+
+            if request.num_assessments >= 8:
+                factors.append(
+                    {
+                        "feature": "num_assessments",
+                        "value": request.num_assessments,
+                        "impact": "strength",
+                    }
+                )
+
+            if request.low_engagement == 0:
+                factors.append(
+                    {"feature": "engagement_level", "value": "High", "impact": "strength"}
+                )
+
+            # If no major strengths identified, add baseline factors
+            if len(factors) == 0:
+                factors.append(
+                    {
+                        "feature": "avg_grade",
+                        "value": request.avg_grade,
+                        "impact": "neutral",
+                    }
+                )
+                factors.append(
+                    {
+                        "feature": "assessment_completion_rate",
+                        "value": request.assessment_completion_rate,
+                        "impact": "neutral",
+                    }
                 )
 
         return factors[:5]  # Top 5 factors
@@ -211,37 +376,83 @@ class AcademicRiskService:
     async def predict(self, request: AcademicRiskRequest) -> AcademicRiskResponse:
         """Make academic risk prediction"""
         try:
-            # Prepare features
-            features = self._prepare_features(request)
-
             if self.model is not None:
-                # Real model prediction
-                prediction = self.model.predict(features)[0]
-                probabilities = self.model.predict_proba(features)[0]
+                # Real model prediction using Booster API
+                dmatrix = self._prepare_features(request)
+                raw_predictions = self.model.predict(dmatrix)
+                
+                # Check if multi-class (3 probabilities) or binary (1 probability)
+                if len(raw_predictions[0]) == 3:
+                    # Multi-class: [prob_safe, prob_medium, prob_at_risk]
+                    prob_safe = float(raw_predictions[0][0])
+                    prob_medium = float(raw_predictions[0][1])
+                    prob_at_risk = float(raw_predictions[0][2])
+                    
+                    # Determine prediction based on highest probability
+                    prediction = int(np.argmax([prob_safe, prob_medium, prob_at_risk]))
+                    
+                    # Log the prediction
+                    logger.info(f"Model prediction (multi-class) - Student: {request.student_id}, "
+                               f"Prob Safe: {prob_safe:.4f}, Prob Medium: {prob_medium:.4f}, "
+                               f"Prob At-Risk: {prob_at_risk:.4f}, Predicted: {prediction}")
+                    
+                    probabilities = np.array([prob_safe, prob_medium, prob_at_risk])
+                else:
+                    # Binary: single probability for at-risk class
+                    prob_at_risk = float(raw_predictions[0])
+                    prob_at_risk = max(0.0, min(1.0, prob_at_risk))
+                    prob_safe = 1.0 - prob_at_risk
+                    
+                    logger.info(f"Model prediction (binary) - Student: {request.student_id}, "
+                               f"Prob At-Risk: {prob_at_risk:.4f}, Prob Safe: {prob_safe:.4f}")
+                    
+                    probabilities = np.array([prob_safe, prob_at_risk])
+                    prediction = 1 if prob_at_risk > 0.5 else 0
             else:
                 # Demo mode prediction
                 prediction, probabilities = self._demo_predict(request)
 
-            risk_level = "At-Risk" if prediction == 1 else "Safe"
-            risk_score = float(probabilities[1])  # Probability of being at-risk
-            confidence = float(probabilities[prediction])
+            # Determine risk level based on prediction
+            if len(probabilities) == 3:
+                # Multi-class
+                risk_levels = ["Safe", "Medium Risk", "At-Risk"]
+                risk_level = risk_levels[prediction]
+                # Calculate weighted risk score: Medium Risk counts as 50% risk, At-Risk as 100% risk
+                risk_score = float(probabilities[1] * 0.5 + probabilities[2] * 1.0)
+                confidence = float(probabilities[prediction])
+            else:
+                # Binary
+                risk_level = "At-Risk" if prediction == 1 else "Safe"
+                risk_score = float(probabilities[1])  # Probability of being at-risk
+                confidence = float(probabilities[prediction])
 
             # Generate recommendations
-            recommendations = self._generate_recommendations(request, prediction)
+            recommendations = self._generate_recommendations(request, prediction, risk_score)
 
             # Get top risk factors
             top_risk_factors = self._get_top_risk_factors(request, prediction)
 
-            # Create response
+            # Create response with appropriate probabilities
+            if len(probabilities) == 3:
+                # Multi-class probabilities
+                probs_dict = {
+                    "Safe": float(probabilities[0]),
+                    "Medium Risk": float(probabilities[1]),
+                    "At-Risk": float(probabilities[2]),
+                }
+            else:
+                # Binary probabilities
+                probs_dict = {
+                    "Safe": float(probabilities[0]),
+                    "At-Risk": float(probabilities[1]),
+                }
+            
             response = AcademicRiskResponse(
                 student_id=request.student_id,
                 risk_level=risk_level,
                 risk_score=risk_score,
                 confidence=confidence,
-                probabilities={
-                    "Safe": float(probabilities[0]),
-                    "At-Risk": float(probabilities[1]),
-                },
+                probabilities=probs_dict,
                 recommendations=recommendations,
                 top_risk_factors=top_risk_factors,
             )

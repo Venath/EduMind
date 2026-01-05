@@ -228,7 +228,7 @@ class MLService:
 
         if risk_level == "high":
             recommendations.insert(
-                0, "⚠️ Consider scheduling a meeting with your academic advisor"
+                0, "[WARNING] Consider scheduling a meeting with your academic advisor"
             )
 
         return recommendations[:5]  # Return top 5 recommendations
