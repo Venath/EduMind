@@ -1,6 +1,6 @@
 ## System Architecture
 
-![EduMind GCP Cloud Native Architecture](docs/edumind_gcp_architecture.png)
+![EduMind GCP Cloud Native Architecture](Docs/edumind_gcp_architecture.png)
 
 ### Tech Stack
 
