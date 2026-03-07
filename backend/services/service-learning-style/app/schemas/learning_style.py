@@ -266,6 +266,12 @@ class ResourceRecommendationResponse(BaseModel):
         from_attributes = True
 
 
+class GenerateRecommendationsResponse(BaseModel):
+    """Response from POST /recommendations/generate; includes updated total for UI."""
+    recommendations: List[ResourceRecommendationResponse]
+    total_recommendations: int
+
+
 class RecommendationList(BaseModel):
     recommendations: List[ResourceRecommendationResponse]
     total: int

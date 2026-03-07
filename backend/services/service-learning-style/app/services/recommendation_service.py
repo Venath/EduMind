@@ -81,22 +81,18 @@ class RecommendationService:
         # Score each resource
         scored_resources = []
         for resource in resources:
-            # Skip if already recommended recently (unless it's highly relevant)
-            if resource.resource_id in recent_resource_ids:
-                continue
-            
             score_breakdown = self._calculate_scores(
                 resource, student, topic, recent_resource_types
             )
-            
-            # Calculate weighted total
             total_score = sum(
                 score_breakdown[factor] * self.WEIGHTS[factor]
                 for factor in self.WEIGHTS.keys()
             )
-            
+            # Slightly down-rank if recommended recently (diversity), but still include to avoid empty list
+            if resource.resource_id in recent_resource_ids:
+                total_score *= 0.7
             scored_resources.append((resource, total_score, score_breakdown))
-        
+
         # Sort by score and return top N
         scored_resources.sort(key=lambda x: x[1], reverse=True)
         return scored_resources[:max_recommendations]
@@ -359,21 +355,29 @@ class RecommendationService:
         scored_resources: List[Tuple[LearningResource, float, Dict[str, float]]],
         struggle_id: Optional[int] = None
     ) -> List[ResourceRecommendation]:
-        """Save recommendations to database"""
+        """Save recommendations to database. Skips creating duplicate rows for same student+resource (reuses existing for response)."""
         recommendations = []
-        
+        cutoff = datetime.now() - timedelta(days=7)
+
         for rank, (resource, score, breakdown) in enumerate(scored_resources, start=1):
-            # Determine priority based on score
+            existing = self.db.query(ResourceRecommendation).filter(
+                ResourceRecommendation.student_id == student_id,
+                ResourceRecommendation.resource_id == resource.resource_id,
+                ResourceRecommendation.recommended_at >= cutoff,
+            ).order_by(desc(ResourceRecommendation.recommended_at)).first()
+
+            if existing:
+                recommendations.append(existing)
+                continue
+
             if score >= settings.HIGH_PRIORITY_THRESHOLD:
                 priority = "High"
             elif score >= settings.MEDIUM_PRIORITY_THRESHOLD:
                 priority = "Medium"
             else:
                 priority = "Low"
-            
-            # Generate reason
+
             reason = self._generate_reason(resource, breakdown, struggle_id)
-            
             recommendation = ResourceRecommendation(
                 student_id=student_id,
                 resource_id=resource.resource_id,
@@ -385,10 +389,9 @@ class RecommendationService:
                 priority=priority,
                 recommended_at=datetime.now()
             )
-            
             self.db.add(recommendation)
             recommendations.append(recommendation)
-        
+
         self.db.commit()
         return recommendations
     
