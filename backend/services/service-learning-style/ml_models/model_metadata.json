@@ -1,14 +1,13 @@
 {
   "model_type": "RandomForestClassifier",
-  "training_date": "2025-12-28T18:36:08.703008",
+  "training_date": "2026-02-27T10:03:51.062727",
   "num_features": 23,
-  "num_training_samples": 80,
-  "num_test_samples": 20,
-  "accuracy": 0.85,
+  "num_training_samples": 160,
+  "num_test_samples": 40,
+  "accuracy": 1.0,
   "classes": [
     "Auditory",
     "Kinesthetic",
-    "Mixed",
     "Reading",
     "Visual"
   ],
@@ -39,97 +38,99 @@
   ],
   "feature_importance": [
     {
-      "feature": "video_engagement_depth",
-      "importance": 0.13801655633033
-    },
-    {
-      "feature": "visual_time_ratio",
-      "importance": 0.09753588290797968
-    },
-    {
       "feature": "auditory_preference_score",
-      "importance": 0.09070888270721876
-    },
-    {
-      "feature": "audio_time_ratio",
-      "importance": 0.08899759382314902
-    },
-    {
-      "feature": "kinesthetic_time_ratio",
-      "importance": 0.08502428537934534
-    },
-    {
-      "feature": "active_vs_passive_ratio",
-      "importance": 0.08430838678998867
-    },
-    {
-      "feature": "video_vs_text_ratio",
-      "importance": 0.08264955834104311
-    },
-    {
-      "feature": "visual_preference_score",
-      "importance": 0.0752051115844297
-    },
-    {
-      "feature": "activity_diversity",
-      "importance": 0.053005393756065756
-    },
-    {
-      "feature": "audio_engagement_depth",
-      "importance": 0.04968810239769765
-    },
-    {
-      "feature": "reading_time_ratio",
-      "importance": 0.04912745412946832
-    },
-    {
-      "feature": "reading_engagement_depth",
-      "importance": 0.04321793818139204
-    },
-    {
-      "feature": "engagement_balance",
-      "importance": 0.01856401001864389
-    },
-    {
-      "feature": "video_completion_rate",
-      "importance": 0.008532609000550482
-    },
-    {
-      "feature": "visual_aid_dependency",
-      "importance": 0.007296399932524199
-    },
-    {
-      "feature": "kinesthetic_interaction_score",
-      "importance": 0.006690489442229076
-    },
-    {
-      "feature": "kinesthetic_preference_score",
-      "importance": 0.006048238632346231
-    },
-    {
-      "feature": "note_taking_intensity",
-      "importance": 0.0037369596075659105
-    },
-    {
-      "feature": "login_count",
-      "importance": 0.0034219981987208656
-    },
-    {
-      "feature": "reading_preference_score",
-      "importance": 0.003169531693861773
-    },
-    {
-      "feature": "visual_interaction_score",
-      "importance": 0.0029927185758181884
+      "importance": 0.1093781031186298
     },
     {
       "feature": "social_interaction_score",
-      "importance": 0.002061898569631175
+      "importance": 0.08798360685817866
+    },
+    {
+      "feature": "kinesthetic_interaction_score",
+      "importance": 0.08533367968676614
+    },
+    {
+      "feature": "kinesthetic_preference_score",
+      "importance": 0.07364209689379327
+    },
+    {
+      "feature": "kinesthetic_time_ratio",
+      "importance": 0.07057112230858475
+    },
+    {
+      "feature": "audio_time_ratio",
+      "importance": 0.07055051958501878
+    },
+    {
+      "feature": "reading_engagement_depth",
+      "importance": 0.0648186022862327
+    },
+    {
+      "feature": "visual_interaction_score",
+      "importance": 0.06148784725912069
+    },
+    {
+      "feature": "reading_preference_score",
+      "importance": 0.05665483820781205
+    },
+    {
+      "feature": "audio_engagement_depth",
+      "importance": 0.055796226519320855
+    },
+    {
+      "feature": "visual_preference_score",
+      "importance": 0.055635039994393495
+    },
+    {
+      "feature": "visual_aid_dependency",
+      "importance": 0.05334199426734663
+    },
+    {
+      "feature": "visual_time_ratio",
+      "importance": 0.04278747008964839
+    },
+    {
+      "feature": "reading_time_ratio",
+      "importance": 0.0391403327566591
+    },
+    {
+      "feature": "video_engagement_depth",
+      "importance": 0.03351940028650012
+    },
+    {
+      "feature": "video_vs_text_ratio",
+      "importance": 0.03187305123615343
+    },
+    {
+      "feature": "activity_diversity",
+      "importance": 0.0031817894679660253
+    },
+    {
+      "feature": "note_taking_intensity",
+      "importance": 0.0027135584151411563
+    },
+    {
+      "feature": "engagement_balance",
+      "importance": 0.0014899333611590986
+    },
+    {
+      "feature": "login_count",
+      "importance": 0.00010078740157480315
+    },
+    {
+      "feature": "active_vs_passive_ratio",
+      "importance": 0.0
     },
     {
       "feature": "social_learning_score",
       "importance": 0.0
+    },
+    {
+      "feature": "video_completion_rate",
+      "importance": 0.0
     }
   ],
-  "version": "1.0"
+  "version": "1.0",
+  "trained_on": "synthetic_dummy_data",
+  "note": "Model trained on synthetic data; real predictions use actual behavior features."
 }
