@@ -98,7 +98,7 @@ export function StudentInsightsSection({
     const engagementLevelLabel = getEngagementLevelLabel(selectedDashboard.current_status.engagement_level);
     const disengagementProbability = selectedDashboard.current_status.risk_probability == null
         ? null
-        : Math.round(selectedDashboard.current_status.risk_probability * 100);
+        : Math.round(selectedDashboard.current_status.risk_probability * 1000) / 10; // one decimal place
 
     const engagementTrendData = useMemo(() => {
         if (engagementHistory.length === 0) return null;
@@ -221,8 +221,11 @@ export function StudentInsightsSection({
                                     Unavailable
                                 </div>
                             ) : (
-                                <div className="flex h-full items-center rounded-full bg-gradient-to-r from-rose-500 to-amber-500 px-2 text-xs font-bold text-white" style={{ width: `${disengagementProbability}%` }}>
-                                    {disengagementProbability}%
+                                <div
+                                    className="flex h-full items-center rounded-full bg-gradient-to-r from-rose-500 to-amber-500 px-2 text-xs font-bold text-white"
+                                    style={{ width: `${Math.max(disengagementProbability, 1)}%` }} // ensure visible even for very low risk
+                                >
+                                    {disengagementProbability.toFixed(1)}%
                                 </div>
                             )}
                         </div>
@@ -272,7 +275,7 @@ export function StudentInsightsSection({
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Content Views</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{aggregatedMetrics.contentViews}</p></div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Assignments</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{aggregatedMetrics.assignments}</p></div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Quiz Attempts</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{aggregatedMetrics.quizAttempts}</p></div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Forum Posts</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{aggregatedMetrics.forumPosts}</p></div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Forum Activity</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{aggregatedMetrics.forumPosts}</p><p className="text-xs text-slate-400">posts + replies</p></div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Time Spent</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{aggregatedMetrics.timeSpent} min</p></div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"><p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Login Frequency</p><p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{aggregatedMetrics.loginFreq}</p></div>
                 </div>

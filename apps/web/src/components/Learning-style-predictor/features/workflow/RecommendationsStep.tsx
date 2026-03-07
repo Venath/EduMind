@@ -109,7 +109,9 @@ export function RecommendationsStep({
 
                 {recommendationsRequested && generatedRecommendations.length === 0 && !recommendationError ? (
                     <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900 p-3 text-sm font-medium text-amber-800 dark:text-amber-200">
-                        No recommendations matched the current topic filter.
+                        {topicFilter.trim()
+                            ? 'No recommendations matched the current topic filter. Clear the topic field and click Get Recommendations again to see all.'
+                            : 'No recommendations were returned. Ensure the student has a profile and learning resources exist, then try Get Recommendations again.'}
                     </div>
                 ) : null}
             </div>

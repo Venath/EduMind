@@ -50,6 +50,7 @@ class EventCreate(BaseModel):
     session_id: Optional[str] = Field(None, description="Session identifier")
     event_data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Event metadata")
     source_service: Optional[str] = Field("moodle", description="Source system")
+    institute_id: Optional[str] = Field(None, description="Institute/LMS identifier (overridden by header if present)")
 
     class Config:
         json_schema_extra = {
@@ -59,7 +60,8 @@ class EventCreate(BaseModel):
                 "event_timestamp": "2025-12-15T10:30:00Z",
                 "session_id": "sess_12345",
                 "event_data": {"ip_address": "192.168.1.1"},
-                "source_service": "moodle"
+                "source_service": "moodle",
+                "institute_id": "LMS_INST_A"
             }
         }
 
@@ -137,6 +139,9 @@ class DailyMetricResponse(BaseModel):
     total_session_duration_minutes: float
     page_views: int
     content_interactions: int
+    video_plays: int = 0
+    video_watch_minutes: float = 0.0
+    resource_downloads: int = 0
     forum_posts: int
     forum_replies: int
     quiz_attempts: int
@@ -191,6 +196,7 @@ class StatsResponse(BaseModel):
     high_risk_students: int
     low_engagement_students: int
     avg_engagement_score: float = 0.0
+    at_risk_students: int = 0
 
 
 class ErrorResponse(BaseModel):

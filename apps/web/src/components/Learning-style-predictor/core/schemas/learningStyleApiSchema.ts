@@ -52,9 +52,15 @@ export const LearningStyleRecommendationApiSchema = z.object({
 
 export const LearningStyleRecommendationsApiSchema = z.array(LearningStyleRecommendationApiSchema);
 
+export const LearningStyleGenerateRecommendationsApiSchema = z.object({
+    recommendations: z.array(LearningStyleRecommendationApiSchema),
+    total_recommendations: z.number().int().nonnegative(),
+});
+
 export type LearningStyleHealthResponse = z.infer<typeof LearningStyleHealthResponseSchema>;
 export type LearningStylePredictionApiResponse = z.infer<typeof LearningStylePredictionApiSchema>;
 export type LearningStyleStudentSummaryApiResponse = z.infer<typeof LearningStyleStudentSummaryApiSchema>;
 export type LearningStyleStudentProfileApiResponse = z.infer<typeof LearningStyleStudentProfileApiSchema>;
 export type LearningStyleSystemStatsApiResponse = z.infer<typeof LearningStyleSystemStatsApiSchema>;
 export type LearningStyleRecommendationApiResponse = z.infer<typeof LearningStyleRecommendationApiSchema>;
+export type LearningStyleGenerateRecommendationsApiResponse = z.infer<typeof LearningStyleGenerateRecommendationsApiSchema>;

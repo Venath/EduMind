@@ -55,8 +55,11 @@ export interface ILearningStyleService {
 }
 
 export interface ILearningStyleDashboardService extends ILearningStyleService {
-    listStudentIds(limit?: number): Promise<string[]>;
+    listStudentIds(limit?: number, instituteId?: string): Promise<string[]>;
     getStudentProfile(studentId: string): Promise<StudentProfileSummaryData>;
-    getSystemStats(): Promise<LearningStyleSystemStats>;
-    generateRecommendations(studentId: string, maxRecommendations?: number): Promise<string[]>;
+    getSystemStats(instituteId?: string): Promise<LearningStyleSystemStats>;
+    generateRecommendations(
+        studentId: string,
+        maxRecommendations?: number
+    ): Promise<{ recommendations: string[]; totalRecommendations: number }>;
 }

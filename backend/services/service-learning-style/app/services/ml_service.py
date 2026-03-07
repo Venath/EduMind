@@ -182,6 +182,39 @@ class LearningStyleMLService:
             })
         
         return behavior_data
+
+    def _blend_with_behavior(self, aggregated: pd.DataFrame, ml_probs: Dict) -> Dict:
+        """
+        Blend ML probabilities with a distribution derived from raw behavior
+        so that recent activity (video, reading, etc.) visibly shifts the result.
+        VARK mapping: Visual ~ diagram/image, Auditory ~ video/audio, Reading ~ text/articles, Kinesthetic ~ interactive/hands-on.
+        """
+        style_keys = ['Visual', 'Auditory', 'Reading', 'Kinesthetic', 'Mixed']
+        if aggregated.empty:
+            return ml_probs
+        row = aggregated.iloc[0]
+        # Raw sums (avoid 0 to get a valid distribution)
+        visual_s = max(0, float(row.get('diagram_views', 0) or 0) + float(row.get('image_interactions', 0) or 0) + float(row.get('visual_aid_usage', 0) or 0)) + 1e-6
+        auditory_s = max(0, float(row.get('video_watch_time', 0) or 0) / 60.0 + float(row.get('audio_playback_time', 0) or 0) / 60.0 + float(row.get('video_interactions', 0) or 0)) + 1e-6
+        reading_s = max(0, float(row.get('text_read_time', 0) or 0) / 60.0 + float(row.get('articles_read', 0) or 0)) + 1e-6
+        kinesthetic_s = max(0, float(row.get('interactive_exercises', 0) or 0) + float(row.get('hands_on_activities', 0) or 0) + float(row.get('simulation_time', 0) or 0) / 60.0) + 1e-6
+        total = visual_s + auditory_s + reading_s + kinesthetic_s
+        behavior_probs = {
+            'Visual': visual_s / total,
+            'Auditory': auditory_s / total,
+            'Reading': reading_s / total,
+            'Kinesthetic': kinesthetic_s / total,
+            'Mixed': 0.0,
+        }
+        # Blend: 45% ML, 55% behavior so recent activity clearly affects the distribution
+        blend = 0.45
+        out = {}
+        for k in style_keys:
+            out[k] = blend * float(ml_probs.get(k, 0.0)) + (1.0 - blend) * float(behavior_probs.get(k, 0.0))
+        s = sum(out.values())
+        if s > 0:
+            out = {k: v / s for k, v in out.items()}
+        return out
     
     def predict_learning_style(self, student_id: str, db: Session) -> Dict:
         """
@@ -245,14 +278,17 @@ class LearningStyleMLService:
             # Map probabilities to class names
             classes = self.model.classes_
             prob_dict = {
-                str(cls): float(prob) 
+                str(cls): float(prob)
                 for cls, prob in zip(classes, probabilities)
             }
             
-            # Calculate confidence (max probability)
-            confidence = float(max(probabilities))
+            # Blend with behavior-based distribution so recent activity (video, reading, etc.) visibly shifts the result
+            prob_dict = self._blend_with_behavior(aggregated, prob_dict)
             
-            # Determine confidence level
+            # Recompute predicted_style and confidence from blended distribution
+            predicted_style = max(prob_dict, key=prob_dict.get)
+            confidence = float(prob_dict.get(predicted_style, 0.0))
+            
             if confidence >= 0.8:
                 confidence_level = 'High'
             elif confidence >= 0.6:
@@ -260,15 +296,14 @@ class LearningStyleMLService:
             else:
                 confidence_level = 'Low'
             
-            # Return results
             return {
                 'student_id': student_id,
-                'predicted_style': str(prediction),
+                'predicted_style': predicted_style,
                 'confidence': confidence,
                 'confidence_level': confidence_level,
                 'probabilities': prob_dict,
                 'days_tracked': data_check['days_tracked'],
-                'model_version': self.metadata.get('version', '1.0') if self.metadata else '1.0',
+                'model_version': (self.metadata.get('version', '1.0') if self.metadata else '1.0') + '+behavior',
                 'predicted_at': datetime.now().isoformat()
             }
             
@@ -302,6 +337,9 @@ class LearningStyleMLService:
             # Update with prediction
             profile.learning_style = prediction['predicted_style']
             profile.style_confidence = prediction['confidence']
+            probs = prediction.get('probabilities')
+            if isinstance(probs, dict):
+                profile.style_probabilities = probs
             profile.updated_at = datetime.now()
             
             db.commit()
