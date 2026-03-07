@@ -38,12 +38,12 @@ export function LearningStyleAnalyticsSection({
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-background dark:bg-slate-900 p-4 shadow-sm">
+            {/* <div className="rounded-2xl border border-slate-200 bg-background dark:bg-slate-900 p-4 shadow-sm">
                 <h3 className="mb-2 text-base font-bold text-slate-900 dark:text-slate-100">Top Struggle Topics</h3>
                 <div className="h-72">
                     <Bar data={struggleChartData} options={struggleChartOptions} />
                 </div>
-            </div>
+            </div> */}
         </section>
     );
 }

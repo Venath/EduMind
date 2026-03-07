@@ -215,7 +215,7 @@ export default function EngagementOverview() {
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                             <div className="flex items-center gap-2 text-slate-400 mb-1">
-                                <span className="text-xs font-medium text-slate-400">—</span>
+                                <span className="text-xs font-medium text-slate-300">Average Performance</span>
                             </div>
                             <div className="text-2xl font-bold text-white/50">—</div>
                         </div>
@@ -276,7 +276,7 @@ export default function EngagementOverview() {
                                     onChange={e => setSearchId(e.target.value)}
                                 />
                                 <select
-                                    className="w-[90px] px-2 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                    className="w-[90px] px-2 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-900"
                                     value={sortOrder}
                                     onChange={e => setSortOrder(e.target.value as any)}
                                 >
@@ -292,7 +292,7 @@ export default function EngagementOverview() {
                             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Engagement Score</label>
                             <div className="flex flex-wrap gap-2">
                                 <select
-                                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 min-w-0"
+                                    className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 min-w-0 text-slate-900"
                                     value={scoreOp}
                                     onChange={e => setScoreOp(e.target.value as any)}
                                 >
@@ -327,7 +327,7 @@ export default function EngagementOverview() {
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Learning Style</label>
                             <select
-                                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                className="px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-900"
                                 value={styleFilter}
                                 onChange={e => setStyleFilter(e.target.value)}
                             >
@@ -344,7 +344,7 @@ export default function EngagementOverview() {
                             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last Updated</label>
                             <div className="flex gap-2">
                                 <select
-                                    className="w-[100px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                    className="w-[100px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-900"
                                     value={dateOp}
                                     onChange={e => setDateOp(e.target.value as any)}
                                 >
