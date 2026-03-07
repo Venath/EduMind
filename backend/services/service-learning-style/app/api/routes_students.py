@@ -1,7 +1,7 @@
 """API routes for student profiles and analytics"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from typing import List
 
 from app.api.dependencies import get_db
@@ -14,7 +14,8 @@ from app.schemas import (
 from app.models import (
     StudentLearningProfile,
     StudentStruggle,
-    ResourceRecommendation
+    ResourceRecommendation,
+    StudentBehaviorTracking,
 )
 
 router = APIRouter(prefix="/students", tags=["Students"])
@@ -50,7 +51,7 @@ def get_student_profile(
     student_id: str,
     db: Session = Depends(get_db)
 ):
-    """Get student learning profile by ID"""
+    """Get student learning profile by ID. Refreshes days_tracked and completion stats from behavior/recommendation data."""
     profile = db.query(StudentLearningProfile).filter(
         StudentLearningProfile.student_id == student_id
     ).first()
@@ -61,6 +62,45 @@ def get_student_profile(
             detail=f"Student {student_id} not found"
         )
     
+    # Refresh days_tracked from behavior tracking count
+    days_tracked = db.query(func.count(StudentBehaviorTracking.behavior_id)).filter(
+        StudentBehaviorTracking.student_id == student_id
+    ).scalar() or 0
+    profile.days_tracked = days_tracked
+    
+    # Refresh completion stats from recommendations
+    recs = db.query(ResourceRecommendation).filter(
+        ResourceRecommendation.student_id == student_id
+    ).all()
+    total_recs = len(recs)
+    completed_recs = sum(1 for r in recs if r.completed)
+    profile.total_recommendations_received = total_recs
+    profile.total_resources_completed = completed_recs
+    rec_rate = (completed_recs / total_recs * 100.0) if total_recs > 0 else None
+
+    # Activity-based component: % of tracked days with meaningful activity so "working" moves the rate
+    activity_rate = None
+    if days_tracked > 0:
+        days_with_activity = db.query(func.count(StudentBehaviorTracking.behavior_id)).filter(
+            StudentBehaviorTracking.student_id == student_id,
+            or_(
+                StudentBehaviorTracking.total_session_time > 60,
+                StudentBehaviorTracking.login_count > 0,
+            ),
+        ).scalar() or 0
+        activity_rate = min(100.0, (days_with_activity / days_tracked) * 100.0)
+
+    if rec_rate is not None and activity_rate is not None:
+        profile.avg_completion_rate = round(0.5 * rec_rate + 0.5 * activity_rate, 1)
+    elif rec_rate is not None:
+        profile.avg_completion_rate = round(rec_rate, 1)
+    elif activity_rate is not None:
+        profile.avg_completion_rate = round(activity_rate, 1)
+    elif days_tracked > 0:
+        profile.avg_completion_rate = 50.0
+
+    db.commit()
+    db.refresh(profile)
     return profile
 
 
@@ -98,6 +138,22 @@ def get_student_analytics(
     db: Session = Depends(get_db)
 ):
     """Get comprehensive analytics for a student"""
+    # Sync latest engagement data from engagement-tracker
+    try:
+        from app.services.engagement_sync_service import sync_student_behavior
+        sync_student_behavior(student_id=student_id, days=14)
+    except Exception:
+        pass
+
+    # Refresh learning style prediction from behavior data
+    try:
+        from app.services.ml_service import get_ml_service
+        ml = get_ml_service()
+        if ml.is_ready:
+            ml.classify_and_update(student_id, db)
+    except Exception:
+        pass
+
     profile = db.query(StudentLearningProfile).filter(
         StudentLearningProfile.student_id == student_id
     ).first()

@@ -1,7 +1,7 @@
 """API routes for recommendations"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy import func
 
 from app.api.dependencies import get_db
 from app.schemas import (
@@ -9,7 +9,8 @@ from app.schemas import (
     ResourceRecommendationResponse,
     RecommendationList,
     RecommendationFeedback,
-    RecommendationEngagement
+    RecommendationEngagement,
+    GenerateRecommendationsResponse,
 )
 from app.models import ResourceRecommendation, LearningResource, StudentLearningProfile
 from app.services.recommendation_service import RecommendationService
@@ -17,24 +18,22 @@ from app.services.recommendation_service import RecommendationService
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
 
-@router.post("/generate", response_model=List[ResourceRecommendationResponse])
+@router.post("/generate", response_model=GenerateRecommendationsResponse)
 def generate_recommendations(
     request: RecommendationRequest,
     db: Session = Depends(get_db)
 ):
-    """Generate personalized resource recommendations for a student"""
-    # Check if student exists
+    """Generate personalized resource recommendations for a student. Returns list and updated system total so UI can refresh the Recommendations count."""
     student = db.query(StudentLearningProfile).filter(
         StudentLearningProfile.student_id == request.student_id
     ).first()
-    
+
     if not student:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Student {request.student_id} not found"
         )
-    
-    # Generate recommendations
+
     service = RecommendationService(db)
     scored_resources = service.generate_recommendations(
         student_id=request.student_id,
@@ -42,21 +41,23 @@ def generate_recommendations(
         struggle_id=request.struggle_id,
         max_recommendations=request.max_recommendations
     )
-    
-    # Save recommendations
+
     recommendations = service.save_recommendations(
         student_id=request.student_id,
         scored_resources=scored_resources,
         struggle_id=request.struggle_id
     )
-    
-    # Load resource data for response
+
     for rec in recommendations:
         rec.resource = db.query(LearningResource).filter(
             LearningResource.resource_id == rec.resource_id
         ).first()
-    
-    return recommendations
+
+    total_recommendations = db.query(func.count(ResourceRecommendation.recommendation_id)).scalar() or 0
+    return GenerateRecommendationsResponse(
+        recommendations=recommendations,
+        total_recommendations=total_recommendations,
+    )
 
 
 @router.get("/student/{student_id}", response_model=RecommendationList)

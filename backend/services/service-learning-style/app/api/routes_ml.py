@@ -12,13 +12,16 @@ ENDPOINTS:
 Author: Subasinghe S A V R (IT22325846)
 """
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import Dict, List
 from pydantic import BaseModel
 
 from app.api.dependencies import get_db
+from app.core.config import settings
 from app.services.ml_service import get_ml_service
+from app.services.engagement_sync_service import sync_student_behavior
 
 
 # ============================================================
@@ -157,6 +160,30 @@ async def classify_student(
     return result
 
 
+def _refresh_behavior_from_engagement(student_id: str) -> None:
+    """
+    Ensure learning-style has the latest behavior data before classification.
+    1. Trigger engagement-tracker to aggregate today and yesterday (covers timezone/timing).
+    2. Sync those metrics into this service's StudentBehaviorTracking.
+    """
+    from datetime import date, timedelta
+    base = settings.ENGAGEMENT_API_URL.rstrip("/")
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            for days_ago in (0, 1, 2):
+                d = date.today() - timedelta(days=days_ago)
+                client.post(
+                    f"{base}/aggregation/process/{student_id}",
+                    params={"institute_id": "LMS_INST_A", "target_date": str(d)},
+                )
+    except Exception:
+        pass
+    try:
+        sync_student_behavior(student_id=student_id, days=14)
+    except Exception:
+        pass
+
+
 @router.post("/classify-and-update/{student_id}", response_model=PredictionResponse)
 async def classify_and_update_student(
     student_id: str,
@@ -166,18 +193,17 @@ async def classify_and_update_student(
     Classify a student's learning style and update their profile.
     
     This endpoint:
-    1. Predicts the learning style using ML
-    2. Updates the student's profile with the prediction
-    3. Returns the prediction result
+    1. Refreshes behavior from engagement-tracker (aggregate + sync) so latest LMS activity is included
+    2. Predicts the learning style using ML
+    3. Updates the student's profile with the prediction
+    4. Returns the prediction result
     
     **Use this when you want to permanently update the student's profile.**
     
     **Returns:** Same as /classify/{student_id}
     """
-    # Get ML service
+    _refresh_behavior_from_engagement(student_id)
     ml_service = get_ml_service()
-    
-    # Classify and update
     result = ml_service.classify_and_update(student_id, db)
     
     # Handle errors (same as classify endpoint)
