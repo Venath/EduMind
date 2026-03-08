@@ -7,9 +7,12 @@ import {
     BarChart3,
     Brain,
     CheckCircle,
+    LogOut,
     RefreshCw,
+    TrendingUp,
     Users,
 } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 
 const API_BASE = import.meta.env.VITE_ENGAGEMENT_TRACKER_API_URL ?? 'http://localhost:8005';
 const LEARNING_STYLE_API = import.meta.env.VITE_LEARNING_STYLE_API_URL ?? 'http://localhost:8006';
@@ -49,6 +52,7 @@ const SCORE_BAR_COLOR = (score: number) => {
 export default function EngagementOverview() {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const logout = useAuthStore(state => state.logout);
     const instituteId = user?.institute_id ?? 'LMS_INST_A';
 
     const [students, setStudents] = useState<StudentRow[]>([]);
@@ -57,6 +61,11 @@ export default function EngagementOverview() {
     const [filter, setFilter] = useState<'all' | 'at_risk' | 'high_risk'>('all');
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
     const [avgLearningStyle, setAvgLearningStyle] = useState<string>('—');
+
+    const handleSignout = () => {
+        logout();
+        navigate({ to: '/admin-signin' });
+    };
 
     // Advanced Filters & Sort
     const [searchId, setSearchId] = useState('');
@@ -181,13 +190,22 @@ export default function EngagementOverview() {
                                 Last refreshed: {lastRefresh.toLocaleTimeString()}
                             </p>
                         </div>
-                        <button
-                            onClick={() => void fetchStudents()}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors text-sm"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => void fetchStudents()}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors text-sm"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </button>
+                            <button
+                                onClick={handleSignout}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-500/20 text-rose-200 border border-rose-500/30 hover:bg-rose-500/30 transition-colors text-sm"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Sign Out
+                            </button>
+                        </div>
                     </div>
 
                     {/* Summary Cards */}
@@ -271,7 +289,7 @@ export default function EngagementOverview() {
                                 <input
                                     type="text"
                                     placeholder="e.g. STU0001"
-                                    className="flex-1 min-w-[100px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                    className="flex-1 min-w-[100px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-900"
                                     value={searchId}
                                     onChange={e => setSearchId(e.target.value)}
                                 />
@@ -305,7 +323,7 @@ export default function EngagementOverview() {
                                 {scoreOp !== 'all' && (
                                     <input
                                         type="number"
-                                        className="flex-1 min-w-[60px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                        className="flex-1 min-w-[60px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-900"
                                         placeholder="Val 1"
                                         value={scoreVal1}
                                         onChange={e => setScoreVal1(e.target.value ? Number(e.target.value) : '')}
@@ -314,7 +332,7 @@ export default function EngagementOverview() {
                                 {scoreOp === 'between' && (
                                     <input
                                         type="number"
-                                        className="flex-1 min-w-[60px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                        className="flex-1 min-w-[60px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-900"
                                         placeholder="Val 2"
                                         value={scoreVal2}
                                         onChange={e => setScoreVal2(e.target.value ? Number(e.target.value) : '')}
@@ -356,7 +374,7 @@ export default function EngagementOverview() {
                                 {dateOp !== 'all' && (
                                     <input
                                         type="date"
-                                        className="flex-1 w-[120px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                        className="flex-1 w-[120px] px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-900"
                                         value={dateVal}
                                         onChange={e => setDateVal(e.target.value)}
                                     />
@@ -465,6 +483,16 @@ export default function EngagementOverview() {
                                                     >
                                                         <Brain className="w-3.5 h-3.5" />
                                                         Learning Style
+                                                    </button>
+                                                    <button
+                                                        onClick={() => navigate({
+                                                            to: '/analytics',
+                                                            search: (prev: any) => ({ ...prev, student_id: student.student_id }),
+                                                        })}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 hover:border-blue-300 text-xs font-semibold transition-all duration-150 whitespace-nowrap"
+                                                    >
+                                                        <TrendingUp className="w-3.5 h-3.5" />
+                                                        Performance
                                                     </button>
                                                 </div>
                                             </td>
