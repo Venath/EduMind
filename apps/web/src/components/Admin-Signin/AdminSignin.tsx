@@ -19,7 +19,7 @@ function AdminSignin() {
   // Credential registry: username -> { password, institute_id, display name }
   // In production this would be a real API call.
   const ADMIN_ACCOUNTS: Record<string, { password: string; institute_id: string; name: string }> = {
-    admin:   { password: 'admin',   institute_id: 'LMS_INST_A', name: 'Admin – Institute A' },
+    admin: { password: 'admin', institute_id: 'LMS_INST_A', name: 'Admin – Institute A' },
     admin_b: { password: 'admin_b', institute_id: 'LMS_INST_B', name: 'Admin – Institute B' },
   };
 
@@ -162,17 +162,17 @@ function AdminSignin() {
           </form>
 
           {/* Divider */}
-          <div className="relative my-6">
+          {/* <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-4 bg-background text-muted-foreground">or continue as</span>
             </div>
-          </div>
+          </div> */}
 
           {/* User Sign-in Link */}
-          <Button
+          {/* <Button
             type="button"
             variant="outline"
             onClick={() => navigate({ to: '/user-signin' })}
@@ -180,7 +180,7 @@ function AdminSignin() {
           >
             <Mail className="w-5 h-5 mr-2" />
             Sign in as User
-          </Button>
+          </Button> */}
 
           {/* Back to Home */}
           <div className="mt-6 text-center">
