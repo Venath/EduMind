@@ -111,7 +111,10 @@ export function PredictionResults({
                             </div>
                             <div className="space-y-4 border-t pt-6 md:border-t-0 md:border-l md:pt-0 md:pl-8">
                                 <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Outcome Probability</h4>
-                                <ProbabilitiesSection probabilities={prediction.probabilities} />
+                                <ProbabilitiesSection
+                                    probabilities={prediction.probabilities}
+                                    riskLevel={prediction.risk_level}
+                                />
                             </div>
                         </div>
                     </CardContent>

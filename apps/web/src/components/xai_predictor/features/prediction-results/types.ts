@@ -46,6 +46,7 @@ export type RiskGaugeProps = {
 
 export type ProbabilitiesSectionProps = {
     probabilities: Record<string, number>;
+    riskLevel: string;
 };
 
 export type RiskFactor = {
@@ -81,4 +82,3 @@ export type TrendData = {
 export type TrendIndicatorsProps = {
     trends: TrendData[];
 };
-
