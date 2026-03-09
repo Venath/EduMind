@@ -5,10 +5,14 @@
  */
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useSearch } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
+import { useEffect, useState } from 'react';
 import { useResultsActions } from '../core/hooks/useResultsActions';
+import { xaiService } from '../core/services/xaiService';
 import { useXAILogic } from '../core/hooks/useXAILogic';
 import { StudentRiskRequestSchema, type StudentRiskRequest } from '../core/schemas/xai.schemas';
+import { XAIOverviewSection } from '../features/dashboard/XAIOverviewSection';
 import { PredictionForm } from '../features/prediction-form/PredictionForm';
 import { PredictionResults } from '../features/prediction-results/PredictionResults';
 import { ModelDownFallback } from '../ui/fallbacks/ModelDownFallback';
@@ -18,7 +22,13 @@ import { PredictionResultsSkeleton } from '../ui/skeletons/PredictionResultsSkel
 
 export function XAIPredictionOrchestrator() {
     // Access logic from custom hook (replaces Context)
-    const { prediction, modelHealth, toast, form: storeForm, actionPlan, ui, modal, filter, aria } = useXAILogic();
+    const { prediction, modelHealth, toast, form: storeForm, actionPlan, ui, modal, filter, aria, store } = useXAILogic();
+    const search = useSearch({ from: '/analytics' });
+    const urlStudentId = (search as { student_id?: string }).student_id;
+    const [isResolvingStudent, setIsResolvingStudent] = useState(false);
+    const [isSubmittingTemporary, setIsSubmittingTemporary] = useState(false);
+    const [isLoadingTemporaryRecord, setIsLoadingTemporaryRecord] = useState(false);
+    const [temporaryHistoryRefreshToken, setTemporaryHistoryRefreshToken] = useState(0);
 
     // RHF Init
     const form = useForm<StudentRiskRequest>({
@@ -26,17 +36,117 @@ export function XAIPredictionOrchestrator() {
         defaultValues: storeForm.formData, // Init with store values
     });
 
-    const { handleSubmit, reset } = form;
+    const { getValues, handleSubmit, reset } = form;
+
+    useEffect(() => {
+        if (!urlStudentId) {
+            return;
+        }
+
+        const nextFormData = {
+            ...getValues(),
+            student_id: urlStudentId,
+        };
+
+        prediction.reset();
+        store.setActionPlan([]);
+        storeForm.setFormData(nextFormData);
+        reset(nextFormData);
+        // Route-scoped entry should populate the student form section and clear stale results.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [urlStudentId]);
 
     const onSubmit = async (data: StudentRiskRequest) => {
         aria.announceLoading();
+        setIsSubmittingTemporary(true);
         try {
             storeForm.setFormData(data); // Sync to store
-            await prediction.predict(data);
-        } catch {
+            prediction.reset();
+            store.setActionPlan([]);
+            const response = await xaiService.predictTemporaryRisk(data);
+            store.setCurrentPrediction(response);
+            setTemporaryHistoryRefreshToken((current) => current + 1);
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : `Failed to analyze temporary student ${data.student_id}`;
+            toast.showError(message);
             aria.announceError();
+        } finally {
+            setIsSubmittingTemporary(false);
         }
     };
+
+    const handleLoadTemporaryStudent = async (studentId: string) => {
+        aria.announceLoading();
+        setIsLoadingTemporaryRecord(true);
+        try {
+            prediction.reset();
+            store.setActionPlan([]);
+            const savedRecord = await xaiService.getTemporaryStudentRecord(studentId);
+            storeForm.setFormData(savedRecord.request_payload);
+            reset(savedRecord.request_payload);
+            store.setCurrentPrediction(savedRecord.prediction);
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : `Failed to load temporary student ${studentId}`;
+            toast.showError(message);
+            aria.announceError();
+        } finally {
+            setIsLoadingTemporaryRecord(false);
+        }
+    };
+
+    const handleAnalyzeConnectedStudent = async (studentId: string) => {
+        aria.announceLoading();
+        setIsResolvingStudent(true);
+        try {
+            prediction.reset();
+            store.setActionPlan([]);
+            const derivedRequest = await xaiService.getConnectedStudentRequest(studentId);
+            storeForm.setFormData(derivedRequest);
+            reset(derivedRequest);
+            await prediction.predictAsync(derivedRequest);
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : `Failed to analyze student ${studentId}`;
+            toast.showError(message);
+            aria.announceError();
+        } finally {
+            setIsResolvingStudent(false);
+        }
+    };
+
+    const activePrediction = urlStudentId
+        ? prediction.prediction?.student_id === urlStudentId
+            ? prediction.prediction
+            : null
+        : prediction.prediction;
+    const isBusy =
+        prediction.isLoading ||
+        isResolvingStudent ||
+        isSubmittingTemporary ||
+        isLoadingTemporaryRecord;
+    const systemStatus = modelHealth.isLoading
+        ? 'checking'
+        : modelHealth.isHealthy
+            ? 'healthy'
+            : modelHealth.isError
+                ? 'offline'
+                : 'degraded';
+    const systemMessage = modelHealth.isHealthy
+        ? 'XAI prediction service is operational'
+        : modelHealth.isLoading
+            ? 'Checking XAI prediction service status'
+            : modelHealth.error instanceof Error
+                ? modelHealth.error.message
+                : 'XAI prediction service is unavailable';
+    const summaryStudentId = activePrediction?.student_id || storeForm.formData.student_id;
 
     // Results actions hook
     const resultsActions = useResultsActions({
@@ -75,30 +185,43 @@ export function XAIPredictionOrchestrator() {
             toast={toast.toast}
             onToggleTheme={ui.toggleTheme}
         >
+            <XAIOverviewSection
+                systemStatus={systemStatus}
+                systemMessage={systemMessage}
+                currentStudentId={summaryStudentId}
+                latestRiskLevel={activePrediction?.risk_level}
+                confidence={activePrediction?.confidence}
+                modelLoaded={modelHealth.isModelLoaded}
+            />
+
             <ErrorDisplay error={prediction.isError ? prediction.error : null} />
 
             {/* Loading State */}
-            {prediction.isLoading && (
+            {isBusy && (
                 <div role="status" aria-label="Loading prediction results">
                     <PredictionResultsSkeleton />
                 </div>
             )}
 
             {/* Form State */}
-            {!prediction.isLoading && !prediction.prediction && (
+            {!isBusy && (
                 <PredictionForm
                     form={form}
                     onSubmit={handleSubmit(onSubmit)}
+                    onAnalyzeConnectedStudent={handleAnalyzeConnectedStudent}
+                    onLoadTemporaryStudent={handleLoadTemporaryStudent}
                     onClearDraft={handleClearDraft}
-                    isLoading={prediction.isLoading}
+                    isLoading={isBusy}
                     isHealthy={modelHealth.isHealthy}
+                    prefilledStudentId={urlStudentId}
+                    temporaryHistoryRefreshToken={temporaryHistoryRefreshToken}
                 />
             )}
 
             {/* Results State */}
-            {prediction.prediction && !prediction.isLoading && (
+            {activePrediction && !isBusy && (
                 <PredictionResults
-                    prediction={prediction.prediction}
+                    prediction={activePrediction}
                     formData={storeForm.formData}
                     actionPlan={actionPlan.actionPlan}
                     theme={ui.theme}

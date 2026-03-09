@@ -6,12 +6,18 @@
 import type { IXAIService } from '../../data/interfaces';
 import { XAIError } from '../errors/XAIError';
 import {
+    ConnectedStudentSearchResponseSchema,
     HealthResponseSchema,
     RiskPredictionResponseSchema,
     StudentRiskRequestSchema,
+    TemporaryStudentListResponseSchema,
+    TemporaryStudentRecordSchema,
+    type ConnectedStudentSearchResponse,
     type HealthResponse,
     type RiskPredictionResponse,
     type StudentRiskRequest,
+    type TemporaryStudentListResponse,
+    type TemporaryStudentRecord,
 } from '../schemas/xai.schemas';
 
 const API_BASE_URL = import.meta.env.VITE_XAI_API_URL || 'http://localhost:8000';
@@ -54,13 +60,30 @@ class XAIService implements IXAIService {
      * Predict academic risk for a student
      */
     async predictRisk(studentData: StudentRiskRequest): Promise<RiskPredictionResponse> {
+        return this.postPrediction('/api/v1/academic-risk/predict', studentData);
+    }
+
+    /**
+     * Predict academic risk for a temporary/manual student submission.
+     */
+    async predictTemporaryRisk(studentData: StudentRiskRequest): Promise<RiskPredictionResponse> {
+        return this.postPrediction(
+            '/api/v1/academic-risk/temporary-students/predict',
+            studentData
+        );
+    }
+
+    private async postPrediction(
+        path: string,
+        studentData: StudentRiskRequest
+    ): Promise<RiskPredictionResponse> {
         try {
             // Validate request data with Zod
             const validatedRequest = StudentRiskRequestSchema.parse(studentData);
 
             console.log('XAIService - Sending request to API:', validatedRequest);
 
-            const response = await fetch(`${this.baseURL}/api/v1/academic-risk/predict`, {
+            const response = await fetch(`${this.baseURL}${path}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -92,6 +115,137 @@ class XAIService implements IXAIService {
             return validatedData;
         } catch (error) {
             console.error('XAIService - Error in predictRisk:', error);
+            if (error instanceof XAIError) {
+                throw error;
+            }
+            throw XAIError.fromUnknown(error);
+        }
+    }
+
+    /**
+     * Search students available through connected backend services
+     */
+    async searchStudents(
+        query: string,
+        options?: { limit?: number; instituteId?: string }
+    ): Promise<ConnectedStudentSearchResponse> {
+        try {
+            const params = new URLSearchParams();
+            params.set('query', query);
+            params.set('limit', String(options?.limit ?? 8));
+            if (options?.instituteId) {
+                params.set('institute_id', options.instituteId);
+            }
+
+            const response = await fetch(
+                `${this.baseURL}/api/v1/academic-risk/students/search?${params.toString()}`
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new XAIError(error.detail || 'Student search failed', {
+                    statusCode: response.status,
+                    details: error,
+                });
+            }
+
+            const data = await response.json();
+            return ConnectedStudentSearchResponseSchema.parse(data);
+        } catch (error) {
+            if (error instanceof XAIError) {
+                throw error;
+            }
+            throw XAIError.fromUnknown(error);
+        }
+    }
+
+    /**
+     * Build the academic-risk request for a connected student
+     */
+    async getConnectedStudentRequest(
+        studentId: string,
+        options?: { days?: number }
+    ): Promise<StudentRiskRequest> {
+        try {
+            const params = new URLSearchParams();
+            params.set('days', String(options?.days ?? 14));
+
+            const response = await fetch(
+                `${this.baseURL}/api/v1/academic-risk/students/${encodeURIComponent(studentId)}/request?${params.toString()}`
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new XAIError(error.detail || 'Could not build student analysis request', {
+                    statusCode: response.status,
+                    details: error,
+                });
+            }
+
+            const data = await response.json();
+            return StudentRiskRequestSchema.parse(data);
+        } catch (error) {
+            if (error instanceof XAIError) {
+                throw error;
+            }
+            throw XAIError.fromUnknown(error);
+        }
+    }
+
+    /**
+     * List saved temporary student records from the dedicated temp DB.
+     */
+    async getTemporaryStudents(options?: {
+        query?: string;
+        limit?: number;
+    }): Promise<TemporaryStudentListResponse> {
+        try {
+            const params = new URLSearchParams();
+            params.set('query', options?.query ?? '');
+            params.set('limit', String(options?.limit ?? 8));
+
+            const response = await fetch(
+                `${this.baseURL}/api/v1/academic-risk/temporary-students?${params.toString()}`
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new XAIError(error.detail || 'Could not load temporary students', {
+                    statusCode: response.status,
+                    details: error,
+                });
+            }
+
+            const data = await response.json();
+            return TemporaryStudentListResponseSchema.parse(data);
+        } catch (error) {
+            if (error instanceof XAIError) {
+                throw error;
+            }
+            throw XAIError.fromUnknown(error);
+        }
+    }
+
+    /**
+     * Get one saved temporary student record with its latest prediction.
+     */
+    async getTemporaryStudentRecord(studentId: string): Promise<TemporaryStudentRecord> {
+        try {
+            const response = await fetch(
+                `${this.baseURL}/api/v1/academic-risk/temporary-students/${encodeURIComponent(studentId)}`
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new XAIError(error.detail || 'Could not load temporary student record', {
+                    statusCode: response.status,
+                    details: error,
+                });
+            }
+
+            const data = await response.json();
+            return TemporaryStudentRecordSchema.parse(data);
+        } catch (error) {
             if (error instanceof XAIError) {
                 throw error;
             }
@@ -172,9 +326,13 @@ export default XAIService;
 
 // Re-export types from schemas
 export type {
+    ConnectedStudentSearchResponse,
+    ConnectedStudentSummary,
     HealthResponse,
     RiskFactor,
     RiskPredictionResponse,
-    StudentRiskRequest
+    StudentRiskRequest,
+    TemporaryStudentListResponse,
+    TemporaryStudentRecord,
+    TemporaryStudentSummary,
 } from '../schemas/xai.schemas';
-

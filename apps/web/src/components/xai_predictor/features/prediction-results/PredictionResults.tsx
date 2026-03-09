@@ -39,7 +39,10 @@ export function PredictionResults({
                         Prediction Analysis
                     </h2>
                     <p className="text-muted-foreground mt-2 text-lg">
-                        comprehensive risk assessment and AI-driven insights for student success.
+                        Comprehensive risk assessment and AI-driven insights for student success.
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-primary">
+                        Student ID: {prediction.student_id}
                     </p>
                 </div>
                 <QuickActions

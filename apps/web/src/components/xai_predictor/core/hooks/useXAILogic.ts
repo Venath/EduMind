@@ -53,6 +53,7 @@ export function useXAILogic(options?: { enablePersistence?: boolean; enableEvent
     // React Query hooks for async operations
     const prediction = useStudentRiskPrediction();
     const modelHealth = useModelHealth();
+    const activePrediction = store.currentPrediction ?? prediction.prediction;
 
     // Toast functions
     const showToast = useCallback((message: string, type: ToastState['type'] = 'info') => {
@@ -65,22 +66,23 @@ export function useXAILogic(options?: { enablePersistence?: boolean; enableEvent
     const showInfo = useCallback((message: string) => showToast(message, 'info'), [showToast]);
 
     // Auto-generate action plan when prediction completes
-    // Use prediction_id as dependency to avoid infinite loops
+    // Use the active prediction so loaded temporary history and manual submissions
+    // produce the same action-plan state as a fresh connected prediction.
     useEffect(() => {
-        if (prediction.prediction?.prediction_id) {
+        if (activePrediction?.prediction_id) {
             const dynamicPlan = generateDynamicActionPlan(
-                prediction.prediction,
+                activePrediction,
                 store.actionPlan || [] // Pass existing plan to preserve completion state
             );
             console.log('[useXAILogic] Generated action plan:', {
-                predictionId: prediction.prediction.prediction_id,
+                predictionId: activePrediction.prediction_id,
                 actionCount: dynamicPlan.length,
                 actions: dynamicPlan.map(a => a.title)
             });
             store.setActionPlan(dynamicPlan);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [prediction.prediction?.prediction_id]); // Only re-run when prediction ID changes
+    }, [activePrediction?.prediction_id]); // Only re-run when prediction ID changes
 
 
     // Ensure formData always has all fields with fallback defaults
@@ -266,7 +268,7 @@ export function useXAILogic(options?: { enablePersistence?: boolean; enableEvent
     return {
         prediction: {
             ...prediction,
-            prediction: store.currentPrediction ?? prediction.prediction
+            prediction: activePrediction
         },
         modelHealth,
         toast: toastObj,

@@ -4,9 +4,13 @@ import type { StudentRiskRequest } from '../../core/schemas/xai.schemas';
 export type PredictionFormProps = {
     form: UseFormReturn<StudentRiskRequest>;
     onSubmit: (e: React.FormEvent) => void;
+    onAnalyzeConnectedStudent: (studentId: string) => Promise<void>;
+    onLoadTemporaryStudent: (studentId: string) => Promise<void>;
     onClearDraft: () => void;
     isLoading: boolean;
     isHealthy: boolean;
+    prefilledStudentId?: string;
+    temporaryHistoryRefreshToken: number;
 }
 
 export type FormActionsProps = {
@@ -19,4 +23,10 @@ export type FormActionsProps = {
 export type EngagementSectionProps = {}
 export type HistoricalDataSectionProps = {}
 export type AcademicPerformanceSectionProps = {}
-export type StudentInfoSectionProps = {}
+export type StudentInfoSectionProps = {
+    isAnalyzingConnectedStudent: boolean;
+    onAnalyzeConnectedStudent: (studentId: string) => Promise<void>;
+    prefilledStudentId?: string;
+    showTemporaryForm: boolean;
+    onToggleTemporaryForm: () => void;
+}

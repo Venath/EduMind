@@ -5,7 +5,7 @@ export function ProbabilitiesSection({ probabilities }: ProbabilitiesSectionProp
     const getBarColor = (key: string): string => {
         const keyLower = key.toLowerCase();
         if (keyLower.includes('safe')) return '!bg-green-600';
-        if (keyLower.includes('medium')) return '!bg-orange-600';
+        if (keyLower.includes('medium')) return '!bg-yellow-500';
         return '!bg-red-600';
     };
 
