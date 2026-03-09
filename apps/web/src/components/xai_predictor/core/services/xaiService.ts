@@ -20,7 +20,7 @@ import {
     type TemporaryStudentRecord,
 } from '../schemas/xai.schemas';
 
-const API_BASE_URL = import.meta.env.VITE_XAI_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_XAI_API_URL || 'http://localhost:8004';
 
 class XAIService implements IXAIService {
     private baseURL: string;
