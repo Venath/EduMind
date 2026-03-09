@@ -10,9 +10,9 @@ This guide lets you copy the project to a **new computer** and run it exactly li
 
 | Software | Version | Why |
 |----------|---------|-----|
-| **Python** | 3.10 or 3.11 (recommended) | Backend services (engagement, learning-style, LMS, LMS2) |
+| **Python** | 3.10 or 3.11 (recommended) | Backend services (engagement, learning-style, XAI, LMS, LMS2) |
 | **Node.js** | 18 or 20 (LTS) | EduMind web UI (`npm` / `npx`) |
-| **PostgreSQL** | 14 or 15 | Two databases: `edumind` and `edumind_learning_style` |
+| **PostgreSQL** | 14 or 15 | Databases for engagement, learning-style, and XAI services |
 | **Git** (optional) | Any | Only if you copy the project via git clone |
 
 ---
@@ -30,7 +30,7 @@ Use the **same folder name** (e.g. `edumind`) so the commands below work as-is. 
 ## Step 2: Install PostgreSQL and Create Databases
 
 1. Install PostgreSQL if not already installed.
-2. Open **pgAdmin** or **psql** and create **two databases** (same user, e.g. `postgres`):
+2. Open **pgAdmin** or **psql** and create **two databases** manually (same user, e.g. `postgres`):
 
 ```sql
 CREATE DATABASE edumind;
@@ -44,6 +44,11 @@ CREATE DATABASE edumind_learning_style;
    - **Host** (usually `localhost`)
 
 If your password or user is different, you will set them in **Step 4** and **Step 5** using `.env` or environment variables.
+
+The XAI service can create its own databases automatically during `init_db.py`:
+
+- `xai-prediction`
+- `temporary_students_db`
 
 ---
 
@@ -69,7 +74,16 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3.3 LMS (Institute A)
+### 3.3 XAI Prediction (EduMind)
+
+```powershell
+cd C:\Projects\edumind\EduMind\backend\services\service-xai-prediction
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3.4 LMS (Institute A)
 
 ```powershell
 cd C:\Projects\edumind\LMS
@@ -78,7 +92,7 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3.4 LMS2 (Institute B)
+### 3.5 LMS2 (Institute B)
 
 ```powershell
 cd C:\Projects\edumind\LMS2
@@ -118,6 +132,16 @@ Create or edit:
 DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/edumind_learning_style
 ```
 
+**XAI Prediction**  
+Create or edit:
+
+`EduMind\backend\services\service-xai-prediction\.env`
+
+```env
+DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/xai-prediction
+TEMP_STUDENTS_DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/temporary_students_db
+```
+
 Replace `YOUR_PASSWORD` and `postgres` if your user is different.  
 LMS and LMS2 use **SQLite** by default (`lms.db` and `lms2.db` in their folders); no PostgreSQL config needed for them.
 
@@ -131,7 +155,7 @@ Do this **once** on the new computer (or after resetting the DBs).
 
 ```powershell
 cd C:\Projects\edumind\EduMind\backend\services\service-engagement-tracker
-venv\Scripts\activate / source .venv/bin/activate
+venv\Scripts\activate
 python scripts/init_db.py
 ```
 
@@ -142,6 +166,19 @@ cd C:\Projects\edumind\EduMind\backend\services\service-learning-style
 venv\Scripts\activate
 python scripts/init_db.py create
 ```
+
+### 5.3 XAI Prediction – create databases and tables
+
+```powershell
+cd C:\Projects\edumind\EduMind\backend\services\service-xai-prediction
+.venv\Scripts\activate
+python scripts/init_db.py
+```
+
+This creates and initializes:
+
+- `xai-prediction`
+- `temporary_students_db`
 
 LMS and LMS2 create their SQLite DB and tables automatically when you run the seed script or start the server.
 
@@ -163,13 +200,14 @@ Optional: create `EduMind\apps\web\.env.local` if you want to point to different
 ```env
 VITE_ENGAGEMENT_TRACKER_API_URL=http://localhost:8005
 VITE_LEARNING_STYLE_API_URL=http://localhost:8006
+VITE_XAI_API_URL=http://localhost:8004
 ```
 
 ---
 
 ## Step 7: Start All Services (Correct Order)
 
-Start in this order. Use **5 separate terminals** (or 5 tabs). Leave each running.
+Start in this order. Use **6 separate terminals** (or 6 tabs). Leave each running.
 
 ### Terminal 1 – Engagement Tracker (port 8005)
 
@@ -189,7 +227,15 @@ venv\Scripts\activate
 uvicorn app.main:app --reload --port 8006
 ```
 
-### Terminal 3 – EduMind Web UI (port 5174)
+### Terminal 3 – XAI Prediction (port 8004)
+
+```powershell
+cd C:\Projects\edumind\EduMind\backend\services\service-xai-prediction
+.venv\Scripts\activate
+uvicorn app.main:app --reload --port 8004
+```
+
+### Terminal 4 – EduMind Web UI (port 5174)
 
 ```powershell
 cd C:\Projects\edumind\EduMind\apps\web
@@ -197,7 +243,7 @@ pnpm i
 pnpm run dev
 ```
 
-### Terminal 4 – LMS Institute A (port 8010)
+### Terminal 5 – LMS Institute A (port 8010)
 
 ```powershell
 cd C:\Projects\edumind\LMS
@@ -205,7 +251,7 @@ venv\Scripts\activate
 uvicorn app.main:app --reload --port 8010
 ```
 
-### Terminal 5 – LMS2 Institute B (port 8011)
+### Terminal 6 – LMS2 Institute B (port 8011)
 
 ```powershell
 cd C:\Projects\edumind\LMS2
@@ -257,6 +303,7 @@ python scripts/seed_demo_data.py
 |------|-----|
 | **EduMind dashboard (admin)** | http://localhost:5174/admin-signin |
 | **EduMind (after login)** | http://localhost:5174 |
+| **XAI API** | http://localhost:8004/health |
 | **LMS (Institute A)** | http://localhost:8010/frontend/index.html |
 | **LMS2 (Institute B)** | http://localhost:8011/frontend/index.html |
 
@@ -288,10 +335,10 @@ python scripts/seed_demo_data.py
 - [ ] Python 3.10+ and Node 18+ installed  
 - [ ] PostgreSQL installed; databases `edumind` and `edumind_learning_style` created  
 - [ ] Project folder copied (e.g. `C:\Projects\edumind`)  
-- [ ] Four Python venvs created and dependencies installed (engagement, learning-style, LMS, LMS2)  
-- [ ] Engagement + Learning Style DBs initialized (`init_db.py`)  
+- [ ] Five Python venvs created and dependencies installed (engagement, learning-style, XAI, LMS, LMS2)  
+- [ ] Engagement + Learning Style + XAI DBs initialized (`init_db.py`)  
 - [ ] EduMind web: `pnpm install` in `EduMind` (or `EduMind\apps\web` after installing pnpm)  
-- [ ] All 5 services started in order (8005 → 8006 → vite → 8010 → 8011)  
+- [ ] All 6 services started in order (8005 → 8006 → 8004 → vite → 8010 → 8011)  
 - [ ] LMS seed run (5 students)  
 - [ ] LMS2 seed run (20 students)  
 - [ ] Login: admin / admin (Institute A) or admin_b / admin_b (Institute B) at http://localhost:5174/admin-signin  
@@ -301,16 +348,16 @@ python scripts/seed_demo_data.py
 ## If Something Fails
 
 - **“Database does not exist”**  
-  Create `edumind` and `edumind_learning_style` in PostgreSQL (Step 2).
+  Create `edumind` and `edumind_learning_style` in PostgreSQL (Step 2), then run XAI `python scripts/init_db.py` to create its databases.
 
 - **“Connection refused” or “could not connect”**  
-  Start Engagement Tracker (8005) and Learning Style (8006) first; then run the seed scripts.
+  Start Engagement Tracker (8005) and Learning Style (8006) first; then run the seed scripts. Start XAI (8004) before using the XAI page or XAI-backed dashboard stats.
 
 - **“Port already in use”**  
   Another program is using that port. Close it or change the port in the `uvicorn` or `vite` command and in any config that references it.
 
-- **LMS/LMS2 seed fails when calling 8005 or 8006**  
-  Make sure Engagement Tracker and Learning Style are running and that no firewall is blocking localhost ports 8005 and 8006.
+- **LMS/LMS2 seed or XAI search fails when calling backend services**  
+  Make sure Engagement Tracker, Learning Style, and XAI are running and that no firewall is blocking localhost ports 8005, 8006, and 8004.
 
 ---
 
@@ -318,9 +365,10 @@ python scripts/seed_demo_data.py
 
 1. Start **Engagement Tracker** (8005)  
 2. Start **Learning Style** (8006)  
-3. Start **EduMind Web** (vite, 5174)  
-4. Start **LMS** (8010)  
-5. Start **LMS2** (8011)  
-6. Open http://localhost:5174/admin-signin or http://localhost:8010/frontend/index.html (LMS) or http://localhost:8011/frontend/index.html (LMS2)
+3. Start **XAI Prediction** (8004)  
+4. Start **EduMind Web** (vite, 5174)  
+5. Start **LMS** (8010)  
+6. Start **LMS2** (8011)  
+7. Open http://localhost:5174/admin-signin or http://localhost:8010/frontend/index.html (LMS) or http://localhost:8011/frontend/index.html (LMS2)
 
 You only need to run the seed scripts once per machine (or when you want to reset demo data).
