@@ -29,7 +29,7 @@ export function AnalyticsSection() {
                                 className="h-auto py-4 px-6 flex flex-col items-center gap-2 min-w-[160px]"
                             >
                                 <BrainCircuit className="w-6 h-6 text-purple-600" />
-                                <span>Learning Styles</span>
+                                <span>Learning Style Predictor</span>
                             </Button>
 
                             <Button
@@ -39,16 +39,17 @@ export function AnalyticsSection() {
                                 className="h-auto py-4 px-6 flex flex-col items-center gap-2 min-w-[160px]"
                             >
                                 <Users className="w-6 h-6 text-blue-600" />
-                                <span>Engagement</span>
+                                <span>Engagement Tracker</span>
                             </Button>
 
                             <Button
                                 size="lg"
                                 variant="secondary"
+                                onClick={() => navigate({ to: "/analytics" })}
                                 className="h-auto py-4 px-6 flex flex-col items-center gap-2 min-w-[160px]"
                             >
                                 <BarChart className="w-6 h-6 text-emerald-600" />
-                                <span>Performance</span>
+                                <span>XAI Predictor</span>
                             </Button>
                         </div>
                     </div>

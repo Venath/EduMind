@@ -6,7 +6,7 @@ interface StatsDashboardProps {
         students: number;
         courses: number;
         resources: number;
-        completionRate: number;
+        averagePerformance: number;
     };
 }
 
@@ -34,8 +34,8 @@ export function StatsDashboard({ stats }: StatsDashboardProps) {
             bg: "bg-emerald-100 dark:bg-emerald-900/20"
         },
         {
-            title: "Completion Rate",
-            value: `${stats.completionRate}%`,
+            title: "Average Performance",
+            value: `${stats.averagePerformance}%`,
             icon: CheckCircle,
             color: "text-orange-600",
             bg: "bg-orange-100 dark:bg-orange-900/20"

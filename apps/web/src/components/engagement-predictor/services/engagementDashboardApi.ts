@@ -11,7 +11,7 @@ import type {
     SystemStatsResponse,
 } from '../core/types/dashboard';
 
-const ENGAGEMENT_API_BASE = import.meta.env.VITE_ENGAGEMENT_TRACKER_API_URL || 'http://localhost:8002';
+const ENGAGEMENT_API_BASE = import.meta.env.VITE_ENGAGEMENT_TRACKER_API_URL || 'http://localhost:8005';
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
     const response = await fetch(url, init);

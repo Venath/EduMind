@@ -16,6 +16,7 @@ import { useAuthStore } from '@/store/authStore';
 
 const API_BASE = import.meta.env.VITE_ENGAGEMENT_TRACKER_API_URL ?? 'http://localhost:8005';
 const LEARNING_STYLE_API = import.meta.env.VITE_LEARNING_STYLE_API_URL ?? 'http://localhost:8006';
+const XAI_API = import.meta.env.VITE_XAI_API_URL ?? 'http://localhost:8004';
 
 interface StudentRow {
     student_id: string;
@@ -36,6 +37,10 @@ interface LearningStyleProfile {
 
 interface SystemStats {
     learning_style_distribution?: Record<string, number>;
+}
+
+interface XAIStatsResponse {
+    average_performance?: number | null;
 }
 
 interface ListResponse {
@@ -61,6 +66,7 @@ export default function EngagementOverview() {
     const [filter, setFilter] = useState<'all' | 'at_risk' | 'high_risk'>('all');
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
     const [avgLearningStyle, setAvgLearningStyle] = useState<string>('—');
+    const [avgPerformance, setAvgPerformance] = useState<string>('—');
 
     const handleSignout = () => {
         logout();
@@ -81,10 +87,11 @@ export default function EngagementOverview() {
         setLoading(true);
         setError(null);
         try {
-            const [listRes, profilesRes, statsRes] = await Promise.all([
+            const [listRes, profilesRes, statsRes, xaiStatsRes] = await Promise.all([
                 fetch(`${API_BASE}/api/v1/students/list?limit=200&institute_id=${encodeURIComponent(instituteId)}`),
                 fetch(`${LEARNING_STYLE_API}/api/v1/students/?limit=500`),
                 fetch(`${LEARNING_STYLE_API}/api/v1/system/stats`),
+                fetch(`${XAI_API}/api/v1/academic-risk/stats`),
             ]);
 
             if (!listRes.ok) throw new Error(`Server responded with ${listRes.status}`);
@@ -108,6 +115,17 @@ export default function EngagementOverview() {
                 }
             }
             setAvgLearningStyle(modeStyle);
+
+            if (xaiStatsRes.ok) {
+                const xaiStats: XAIStatsResponse = await xaiStatsRes.json();
+                setAvgPerformance(
+                    typeof xaiStats.average_performance === 'number'
+                        ? `${Math.round(xaiStats.average_performance)}%`
+                        : '—'
+                );
+            } else {
+                setAvgPerformance('—');
+            }
 
             setStudents(studentsList.map((s) => ({ ...s, learning_style: map[s.student_id] })));
             setLastRefresh(new Date());
@@ -232,10 +250,11 @@ export default function EngagementOverview() {
                             <div className="text-2xl font-bold text-white">{avgLearningStyle}</div>
                         </div>
                         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                            <div className="flex items-center gap-2 text-slate-400 mb-1">
+                            <div className="flex items-center gap-2 text-cyan-400 mb-1">
+                                <CheckCircle className="w-5 h-5" />
                                 <span className="text-xs font-medium text-slate-300">Average Performance</span>
                             </div>
-                            <div className="text-2xl font-bold text-white/50">—</div>
+                            <div className="text-2xl font-bold text-white">{avgPerformance}</div>
                         </div>
                     </div>
                 </div>
@@ -492,7 +511,7 @@ export default function EngagementOverview() {
                                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 hover:border-blue-300 text-xs font-semibold transition-all duration-150 whitespace-nowrap"
                                                     >
                                                         <TrendingUp className="w-3.5 h-3.5" />
-                                                        Performance
+                                                        Risk Predictor
                                                     </button>
                                                 </div>
                                             </td>

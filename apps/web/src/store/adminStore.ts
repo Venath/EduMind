@@ -6,7 +6,7 @@ export interface DashboardStats {
     students: number;
     courses: number;
     resources: number;
-    completionRate: number;
+    averagePerformance: number;
 }
 
 export interface AdminFilters {
@@ -49,7 +49,7 @@ export const useAdminStore = create<AdminState>()(
                     students: 0,
                     courses: 0,
                     resources: 0,
-                    completionRate: 0,
+                    averagePerformance: 0,
                 },
                 selectedCourse: null,
                 filters: {},
