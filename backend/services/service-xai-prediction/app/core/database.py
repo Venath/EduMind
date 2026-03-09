@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.config import settings
 
-DEFAULT_DB_URL = "postgresql+psycopg://postgres:admin@localhost:5432/edumind"
+DEFAULT_DB_URL = "postgresql+psycopg://postgres:admin@localhost:5432/xai-prediction"
 DEFAULT_TEMP_DB_NAME = "temporary_students_db"
 
 
