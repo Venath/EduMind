@@ -10,7 +10,11 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
-from app.schemas.academic_risk import AcademicRiskRequest
+from app.schemas.academic_risk import (
+    AcademicRiskRequest,
+    RiskTimelinePoint,
+    RiskTimelineResponse,
+)
 from app.schemas.prediction import PredictionRequest
 from app.schemas.student_lookup import (
     ConnectedStudentSearchResponse,
@@ -62,6 +66,80 @@ class XAIFeatureSyncService:
             profile=profile,
         )
 
+    async def build_connected_timeline(
+        self,
+        student_id: str,
+        limit: int = 8,
+        days: int = 30,
+    ) -> RiskTimelineResponse:
+        latest_score, history, daily_metrics, profile = await self._fetch_academic_upstream_data(
+            student_id=student_id,
+            days=max(days, limit),
+        )
+
+        if not history:
+            raise SyncServiceError(
+                status_code=404,
+                detail=f"Engagement history not found for student {student_id}",
+            )
+
+        normalized_history = self._normalize_entries_by_date(history)
+        normalized_metrics = self._normalize_entries_by_date(daily_metrics)
+        selected_history = self._select_timeline_entries(normalized_history, limit)
+        points: list[RiskTimelinePoint] = []
+        previous_request_payload: dict[str, Any] | None = None
+
+        for entry in selected_history:
+            if not isinstance(entry, dict):
+                continue
+
+            entry_date = self._extract_entry_date(entry)
+            history_slice = self._history_until_date(normalized_history, entry_date)
+            metrics_slice = self._metrics_until_date(normalized_metrics, entry_date)
+            request = self._map_to_academic_risk_request(
+                student_id=student_id,
+                latest_score=entry,
+                history=history_slice,
+                daily_metrics=metrics_slice,
+                profile=profile,
+                timeline_mode=True,
+            )
+            prediction = await academic_risk_service.predict(request)
+            request_payload = request.model_dump(mode="json")
+
+            points.append(
+                RiskTimelinePoint(
+                    timestamp=self._timeline_timestamp(entry),
+                    risk_level=prediction.risk_level,
+                    risk_score=prediction.risk_score,
+                    confidence=prediction.confidence,
+                    avg_grade=request.avg_grade,
+                    completion_rate=round(request.assessment_completion_rate * 100.0, 2),
+                    key_driver=self._describe_timeline_driver(
+                        previous_request_payload,
+                        request_payload,
+                    ),
+                )
+            )
+            previous_request_payload = request_payload
+
+        if not points:
+            raise SyncServiceError(
+                status_code=404,
+                detail=f"Could not derive a connected timeline for student {student_id}",
+            )
+
+        latest_point = points[-1]
+        return RiskTimelineResponse(
+            student_id=student_id,
+            total_points=len(points),
+            trend_direction=self._get_trend_direction(points),
+            timeline_basis="derived_history",
+            latest_risk_level=latest_point.risk_level,
+            latest_risk_score=latest_point.risk_score,
+            points=points,
+        )
+
     async def search_students(
         self,
         query: str = "",
@@ -70,37 +148,10 @@ class XAIFeatureSyncService:
     ) -> ConnectedStudentSearchResponse:
         search_query = query.strip().lower()
         fetch_limit = min(max(limit * 5, 100), 1000)
-        timeout = httpx.Timeout(settings.SYNC_TIMEOUT_SECONDS)
-
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            students_payload = await self._fetch_json(
-                client=client,
-                url=f"{self.engagement_base_url}/api/v1/students/list",
-                service_name="engagement",
-                not_found_detail="No students found in engagement service",
-                params={"limit": fetch_limit, "institute_id": institute_id},
-            )
-            profiles_payload = await self._fetch_json_optional(
-                client=client,
-                url=f"{self.learning_style_base_url}/api/v1/students/",
-                params={"limit": fetch_limit},
-            )
-
-        students_data = students_payload.get("students") if isinstance(students_payload, dict) else None
-        if not isinstance(students_data, list):
-            raise SyncServiceError(
-                status_code=502,
-                detail="Unexpected response format for engagement student list",
-            )
-
-        profile_map: dict[str, dict[str, Any]] = {}
-        if isinstance(profiles_payload, list):
-            for profile in profiles_payload:
-                if not isinstance(profile, dict):
-                    continue
-                student_id = str(profile.get("student_id") or "").strip()
-                if student_id:
-                    profile_map[student_id] = profile
+        students_data, profile_map = await self.fetch_student_roster(
+            institute_id=institute_id,
+            limit=fetch_limit,
+        )
 
         matches: list[ConnectedStudentSummary] = []
         for raw_student in students_data:
@@ -158,6 +209,58 @@ class XAIFeatureSyncService:
             institute_id=institute_id,
             students=top_matches,
         )
+
+    async def fetch_student_roster(
+        self,
+        institute_id: str,
+        limit: int = 200,
+    ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+        timeout = httpx.Timeout(settings.SYNC_TIMEOUT_SECONDS)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            students_payload = await self._fetch_json(
+                client=client,
+                url=f"{self.engagement_base_url}/api/v1/students/list",
+                service_name="engagement",
+                not_found_detail="No students found in engagement service",
+                params={"limit": limit, "institute_id": institute_id},
+            )
+            profiles_payload = await self._fetch_json_optional(
+                client=client,
+                url=f"{self.learning_style_base_url}/api/v1/students/",
+                params={"limit": limit},
+            )
+
+        students_data = (
+            students_payload.get("students") if isinstance(students_payload, dict) else None
+        )
+        if not isinstance(students_data, list):
+            raise SyncServiceError(
+                status_code=502,
+                detail="Unexpected response format for engagement student list",
+            )
+
+        profile_map: dict[str, dict[str, Any]] = {}
+        if isinstance(profiles_payload, list):
+            for profile in profiles_payload:
+                if not isinstance(profile, dict):
+                    continue
+                student_id = str(profile.get("student_id") or "").strip()
+                if student_id:
+                    profile_map[student_id] = profile
+
+        return students_data, profile_map
+
+    async def fetch_learning_profile(self, student_id: str) -> dict[str, Any] | None:
+        timeout = httpx.Timeout(settings.SYNC_TIMEOUT_SECONDS)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            profile = await self._fetch_json_optional(
+                client=client,
+                url=f"{self.learning_style_base_url}/api/v1/students/{student_id}",
+            )
+
+        if profile is not None and not isinstance(profile, dict):
+            return None
+        return profile
 
     async def _apply_xai_risk_preview(
         self, students: list[ConnectedStudentSummary]
@@ -393,8 +496,9 @@ class XAIFeatureSyncService:
         history: list[dict[str, Any]],
         daily_metrics: list[dict[str, Any]],
         profile: dict[str, Any] | None,
+        timeline_mode: bool = False,
     ) -> AcademicRiskRequest:
-        score_series = self._extract_score_series(history)
+        score_series = self._extract_score_series(history, timeline_mode=timeline_mode)
         avg_grade = round(sum(score_series) / len(score_series), 2) if score_series else 50.0
         grade_range = round((max(score_series) - min(score_series)), 2) if len(score_series) > 1 else 0.0
         grade_consistency = round(
@@ -454,7 +558,28 @@ class XAIFeatureSyncService:
             has_previous_attempts=0,
         )
 
-    def _extract_score_series(self, history: list[dict[str, Any]]) -> list[float]:
+    def _extract_score_series(
+        self,
+        history: list[dict[str, Any]],
+        timeline_mode: bool = False,
+    ) -> list[float]:
+        if timeline_mode:
+            assignment_scores = [
+                self._to_float(item.get("assignment_score"), 0.0)
+                for item in history
+                if isinstance(item, dict) and item.get("assignment_score") is not None
+            ]
+            if assignment_scores and len({round(score, 4) for score in assignment_scores}) > 1:
+                return assignment_scores
+
+            engagement_scores = [
+                self._to_float(item.get("engagement_score"), 0.0)
+                for item in history
+                if isinstance(item, dict)
+            ]
+            if engagement_scores and len({round(score, 4) for score in engagement_scores}) > 1:
+                return engagement_scores
+
         assignment_scores = [
             self._to_float(item.get("assignment_score"), 0.0)
             for item in history
@@ -474,6 +599,167 @@ class XAIFeatureSyncService:
             return engagement_scores
 
         return [50.0]
+
+    def _history_until_date(
+        self,
+        history: list[dict[str, Any]],
+        target_date: date | None,
+    ) -> list[dict[str, Any]]:
+        if target_date is None:
+            return history
+        return [
+            item
+            for item in history
+            if isinstance(item, dict)
+            and self._extract_entry_date(item) is not None
+            and self._extract_entry_date(item) <= target_date
+        ]
+
+    def _metrics_until_date(
+        self,
+        metrics: list[dict[str, Any]],
+        target_date: date | None,
+    ) -> list[dict[str, Any]]:
+        if target_date is None:
+            return metrics
+        return [
+            item
+            for item in metrics
+            if isinstance(item, dict)
+            and self._extract_entry_date(item) is not None
+            and self._extract_entry_date(item) <= target_date
+        ]
+
+    def _timeline_timestamp(self, entry: dict[str, Any]) -> datetime:
+        entry_date = self._extract_entry_date(entry)
+        if entry_date is not None:
+            return datetime.combine(entry_date, datetime.min.time())
+
+        value = entry.get("created_at")
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError:
+                pass
+        if isinstance(value, datetime):
+            return value
+
+        return datetime.utcnow()
+
+    def _extract_entry_date(self, entry: dict[str, Any]) -> date | None:
+        value = entry.get("date")
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            try:
+                if "T" in value:
+                    return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+                return date.fromisoformat(value)
+            except ValueError:
+                return None
+        return None
+
+    def _normalize_entries_by_date(
+        self,
+        entries: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        deduped_by_date: dict[date, dict[str, Any]] = {}
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            entry_date = self._extract_entry_date(entry)
+            if entry_date is None:
+                continue
+            deduped_by_date[entry_date] = entry
+
+        normalized_entries = list(deduped_by_date.values())
+        normalized_entries.sort(key=lambda entry: self._extract_entry_date(entry) or date.min)
+        return normalized_entries
+
+    def _select_timeline_entries(
+        self,
+        history: list[dict[str, Any]],
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if len(history) <= limit:
+            return history
+
+        indices: list[int] = []
+        max_index = len(history) - 1
+        for step in range(limit):
+            candidate_index = round((step / max(limit - 1, 1)) * max_index)
+            if candidate_index not in indices:
+                indices.append(candidate_index)
+
+        if len(indices) < limit:
+            for candidate_index in range(len(history)):
+                if candidate_index not in indices:
+                    indices.append(candidate_index)
+                if len(indices) == limit:
+                    break
+
+        indices.sort()
+        return [history[index] for index in indices]
+
+    def _describe_timeline_driver(
+        self,
+        previous_payload: dict[str, Any] | None,
+        current_payload: dict[str, Any] | None,
+    ) -> str:
+        if not previous_payload or not current_payload:
+            return "Baseline connected-student analysis derived from engagement history."
+
+        timeline_fields = {
+            "avg_grade": ("Average grade", 100.0, "points"),
+            "grade_consistency": ("Grade consistency", 100.0, "points"),
+            "grade_range": ("Grade range", 100.0, "points"),
+            "assessment_completion_rate": ("Completion rate", 1.0, "%"),
+            "num_assessments": ("Assessments completed", 20.0, ""),
+        }
+
+        top_change: tuple[str, str, float] | None = None
+        for field, (label, scale, unit) in timeline_fields.items():
+            previous_value = self._to_optional_float(previous_payload.get(field))
+            current_value = self._to_optional_float(current_payload.get(field))
+            if previous_value is None or current_value is None:
+                continue
+
+            delta = current_value - previous_value
+            normalized_change = abs(delta) / scale if scale else abs(delta)
+            if top_change is None or normalized_change > top_change[2]:
+                rendered_delta = delta * 100.0 if field == "assessment_completion_rate" else delta
+                top_change = (
+                    label,
+                    f"{rendered_delta:+.1f}{unit}".strip(),
+                    normalized_change,
+                )
+
+        if top_change is None or top_change[2] < 0.02:
+            return "Risk remained broadly stable across the connected engagement history."
+
+        return f"Largest shift: {top_change[0]} changed by {top_change[1]}."
+
+    def _get_trend_direction(self, points: list[RiskTimelinePoint]) -> str:
+        if len(points) < 2:
+            return "insufficient_data"
+
+        delta = points[-1].risk_score - points[0].risk_score
+        if delta >= 0.05:
+            return "worsening"
+        if delta <= -0.05:
+            return "improving"
+        return "stable"
+
+    @staticmethod
+    def _to_optional_float(value: Any) -> float | None:
+        try:
+            if value is None:
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
 
     @staticmethod
     def _to_float(value: Any, default: float) -> float:

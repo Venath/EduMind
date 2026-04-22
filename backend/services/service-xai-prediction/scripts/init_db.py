@@ -19,7 +19,12 @@ from app.core.database import (
     ensure_temp_students_database_exists,
     temp_students_engine,
 )
-from app.models import AcademicRiskPredictionRecord, TemporaryStudentRecord, XAIPredictionRecord
+from app.models import (
+    AcademicRiskPredictionRecord,
+    TemporaryStudentPredictionRecord,
+    TemporaryStudentRecord,
+    XAIPredictionRecord,
+)
 
 
 def create_tables() -> None:
