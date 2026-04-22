@@ -1,0 +1,20 @@
+# Runtime dependencies for the XAI service Docker image
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+sqlalchemy>=2.0.36
+psycopg[binary]>=3.1.0
+
+numpy>=1.26.0,<2.0.0
+pandas==2.0.3
+scikit-learn==1.3.0
+xgboost==2.0.3
+joblib==1.3.2
+shap==0.43.0
+
+python-json-logger==2.0.7
+httpx==0.25.2

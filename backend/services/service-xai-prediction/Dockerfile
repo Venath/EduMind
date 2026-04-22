@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY services/service-xai-prediction/requirements.txt .
+# Copy runtime requirements
+COPY services/service-xai-prediction/requirements.docker.txt ./requirements.txt
 
 # Upgrade pip and install dependencies
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \

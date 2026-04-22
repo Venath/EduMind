@@ -1,7 +1,6 @@
-version: "3.8"
+name: edumind
 
 services:
-  # --- Infrastructure ---
   postgres:
     image: postgres:15-alpine
     environment:
@@ -12,92 +11,173 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - edumind-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    networks:
+      - edumind-network
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    networks:
-      - edumind-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    networks:
+      - edumind-network
 
-  # NOTE: RabbitMQ has been moved to platform/infrastructure/rabbitmq/ for production cluster setup
-  # For development, run: cd platform/infrastructure/rabbitmq && docker-compose up -d
-  # See platform/infrastructure/rabbitmq/README.md for details
-
-  # --- Microservices ---
-  user-service:
-    build:
-      context: backend
-      dockerfile: services/user-service/Dockerfile
-    ports:
-      - "8001:8000"
-    environment:
-      - SERVICE_NAME=user-service
+  postgres-init:
+    image: postgres:15-alpine
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+    environment:
+      PGPASSWORD: postgres_password
+    command:
+      - sh
+      - -c
+      - >
+        psql -h postgres -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'edumind_learning_style'" | grep -q 1 ||
+        psql -h postgres -U postgres -d postgres -c 'CREATE DATABASE edumind_learning_style';
+        psql -h postgres -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'xai-prediction'" | grep -q 1 ||
+        psql -h postgres -U postgres -d postgres -c 'CREATE DATABASE "xai-prediction"';
+        psql -h postgres -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'temporary_students_db'" | grep -q 1 ||
+        psql -h postgres -U postgres -d postgres -c 'CREATE DATABASE temporary_students_db';
+    restart: "no"
     networks:
       - edumind-network
 
   service-engagement-tracker:
     build:
-      context: backend
+      context: ./backend
       dockerfile: services/service-engagement-tracker/Dockerfile
-    ports:
-      - "8004:8000"
     environment:
-      - SERVICE_NAME=service-engagement-tracker
+      SERVICE_NAME: service-engagement-tracker
+      DATABASE_URL: postgresql+psycopg://postgres:postgres_password@postgres:5432/edumind
+      ALLOWED_ORIGINS: '["http://localhost:5174","http://127.0.0.1:5174"]'
+    ports:
+      - "8005:8000"
+    command:
+      - sh
+      - -c
+      - |
+        python scripts/init_db.py &&
+        python scripts/seed_demo_data.py &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./backend/services/service-engagement-tracker/app:/app/app
+      - ./backend/services/service-engagement-tracker/scripts:/app/scripts
+      - ./backend/services/service-engagement-tracker/ml_models:/app/ml_models:ro
+      - ./backend/shared:/app/backend/shared
+      - ./ml:/app/ml:ro
     networks:
       - edumind-network
 
   service-learning-style:
     build:
-      context: backend
+      context: ./backend
       dockerfile: services/service-learning-style/Dockerfile
-    ports:
-      - "8005:8000"
     environment:
-      - SERVICE_NAME=service-learning-style
+      DATABASE_URL: postgresql+psycopg://postgres:postgres_password@postgres:5432/edumind_learning_style
+      CORS_ORIGINS: '["http://localhost:5174","http://127.0.0.1:5174"]'
+      ENGAGEMENT_API_URL: http://service-engagement-tracker:8000/api/v1
+    ports:
+      - "8006:8000"
+    command:
+      - sh
+      - -c
+      - |
+        python scripts/init_db.py create &&
+        python scripts/seed_demo_profiles.py &&
+        python scripts/seed_demo_data.py &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/system/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
+      service-engagement-tracker:
+        condition: service_started
+    volumes:
+      - ./backend/services/service-learning-style/app:/app/app
+      - ./backend/services/service-learning-style/scripts:/app/scripts
+      - ./backend/services/service-learning-style/ml_models:/app/ml_models:ro
+      - ./backend/services/service-learning-style/ml:/app/ml
+      - ./backend/shared:/app/backend/shared
     networks:
       - edumind-network
 
   service-xai-prediction:
     build:
-      context: backend
+      context: ./backend
       dockerfile: services/service-xai-prediction/Dockerfile
-    ports:
-      - "8006:8000"
     environment:
-      - SERVICE_NAME=service-xai-prediction
+      DATABASE_URL: postgresql+psycopg://postgres:postgres_password@postgres:5432/xai-prediction
+      TEMP_STUDENTS_DATABASE_URL: postgresql+psycopg://postgres:postgres_password@postgres:5432/temporary_students_db
+      ALLOWED_ORIGINS: '["http://localhost:5174","http://127.0.0.1:5174"]'
+      ENGAGEMENT_SERVICE_URL: http://service-engagement-tracker:8000
+      LEARNING_STYLE_SERVICE_URL: http://service-learning-style:8000
+      ML_MODELS_PATH: /app/saved_models
+    ports:
+      - "8004:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
+      service-engagement-tracker:
+        condition: service_started
+      service-learning-style:
+        condition: service_started
+    volumes:
+      - ./backend/services/service-xai-prediction/app:/app/app
+      - ./backend/services/service-xai-prediction/saved_models:/app/saved_models:ro
+      - ./backend/shared:/app/backend/shared
+    networks:
+      - edumind-network
+
+  frontend:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    environment:
+      VITE_XAI_API_URL: http://localhost:8004
+      VITE_ENGAGEMENT_TRACKER_API_URL: http://localhost:8005
+      VITE_LEARNING_STYLE_API_URL: http://localhost:8006
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "5174:5174"
+    depends_on:
+      service-engagement-tracker:
+        condition: service_started
+      service-learning-style:
+        condition: service_started
+      service-xai-prediction:
+        condition: service_started
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
     networks:
       - edumind-network
 
