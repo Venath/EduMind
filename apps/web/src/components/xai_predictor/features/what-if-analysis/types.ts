@@ -33,6 +33,17 @@ export type ScenarioControlsProps = {
     scenarioData: StudentRiskRequest;
     onSliderChange: (field: keyof StudentRiskRequest, value: number) => void;
 };
+export type InterventionPreset = {
+    id: string;
+    title: string;
+    description: string;
+    expectedImpact: string;
+};
+export type InterventionPresetsProps = {
+    presets: InterventionPreset[];
+    selectedPresetId: string | null;
+    onApplyPreset: (presetId: string) => void;
+};
 export type ModalActionsProps = {
     onReset: () => void;
     onSimulate: () => void;
