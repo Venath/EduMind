@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearch } from '@tanstack/react-router';
 import { useForm } from 'react-hook-form';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/store/authStore';
 import { useResultsActions } from '../core/hooks/useResultsActions';
 import { xaiService } from '../core/services/xaiService';
 import { useXAILogic } from '../core/hooks/useXAILogic';
@@ -23,8 +24,16 @@ import { PredictionResultsSkeleton } from '../ui/skeletons/PredictionResultsSkel
 export function XAIPredictionOrchestrator() {
     // Access logic from custom hook (replaces Context)
     const { prediction, modelHealth, toast, form: storeForm, actionPlan, ui, modal, filter, aria, store } = useXAILogic();
+    const { user } = useAuth();
     const search = useSearch({ from: '/analytics' });
     const urlStudentId = (search as { student_id?: string }).student_id;
+    const [activeMode, setActiveMode] = useState<'connected' | 'temporary'>('connected');
+    const [connectedStudentContextId, setConnectedStudentContextId] = useState<string | undefined>(
+        urlStudentId
+    );
+    const [predictionSource, setPredictionSource] = useState<'connected' | 'temporary'>(
+        urlStudentId ? 'connected' : 'temporary'
+    );
     const [isResolvingStudent, setIsResolvingStudent] = useState(false);
     const [isSubmittingTemporary, setIsSubmittingTemporary] = useState(false);
     const [isLoadingTemporaryRecord, setIsLoadingTemporaryRecord] = useState(false);
@@ -52,6 +61,9 @@ export function XAIPredictionOrchestrator() {
         store.setActionPlan([]);
         storeForm.setFormData(nextFormData);
         reset(nextFormData);
+        setActiveMode('connected');
+        setConnectedStudentContextId(urlStudentId);
+        setPredictionSource('connected');
         // Route-scoped entry should populate the student form section and clear stale results.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [urlStudentId]);
@@ -65,6 +77,8 @@ export function XAIPredictionOrchestrator() {
             store.setActionPlan([]);
             const response = await xaiService.predictTemporaryRisk(data);
             store.setCurrentPrediction(response);
+            setActiveMode('temporary');
+            setPredictionSource('temporary');
             setTemporaryHistoryRefreshToken((current) => current + 1);
         } catch (error) {
             const message =
@@ -88,6 +102,8 @@ export function XAIPredictionOrchestrator() {
             storeForm.setFormData(savedRecord.request_payload);
             reset(savedRecord.request_payload);
             store.setCurrentPrediction(savedRecord.prediction);
+            setActiveMode('temporary');
+            setPredictionSource('temporary');
         } catch (error) {
             const message =
                 error instanceof Error
@@ -109,6 +125,9 @@ export function XAIPredictionOrchestrator() {
             const derivedRequest = await xaiService.getConnectedStudentRequest(studentId);
             storeForm.setFormData(derivedRequest);
             reset(derivedRequest);
+            setActiveMode('connected');
+            setConnectedStudentContextId(studentId);
+            setPredictionSource('connected');
             await prediction.predictAsync(derivedRequest);
         } catch (error) {
             const message =
@@ -122,11 +141,13 @@ export function XAIPredictionOrchestrator() {
         }
     };
 
-    const activePrediction = urlStudentId
-        ? prediction.prediction?.student_id === urlStudentId
-            ? prediction.prediction
-            : null
-        : prediction.prediction;
+    const resolvedPrediction = store.currentPrediction ?? prediction.prediction;
+    const activePrediction =
+        predictionSource === 'connected' && connectedStudentContextId
+            ? resolvedPrediction?.student_id === connectedStudentContextId
+                ? resolvedPrediction
+                : null
+            : resolvedPrediction;
     const isBusy =
         prediction.isLoading ||
         isResolvingStudent ||
@@ -210,10 +231,12 @@ export function XAIPredictionOrchestrator() {
                     onSubmit={handleSubmit(onSubmit)}
                     onAnalyzeConnectedStudent={handleAnalyzeConnectedStudent}
                     onLoadTemporaryStudent={handleLoadTemporaryStudent}
+                    activeMode={activeMode}
+                    onActiveModeChange={setActiveMode}
                     onClearDraft={handleClearDraft}
                     isLoading={isBusy}
                     isHealthy={modelHealth.isHealthy}
-                    prefilledStudentId={urlStudentId}
+                    prefilledStudentId={connectedStudentContextId}
                     temporaryHistoryRefreshToken={temporaryHistoryRefreshToken}
                 />
             )}
@@ -223,6 +246,8 @@ export function XAIPredictionOrchestrator() {
                 <PredictionResults
                     prediction={activePrediction}
                     formData={storeForm.formData}
+                    predictionSource={predictionSource}
+                    instituteId={user?.institute_id}
                     actionPlan={actionPlan.actionPlan}
                     theme={ui.theme}
                     searchTerm={filter.searchTerm}

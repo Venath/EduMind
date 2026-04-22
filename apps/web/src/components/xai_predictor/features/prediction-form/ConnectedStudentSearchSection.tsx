@@ -17,16 +17,12 @@ type ConnectedStudentSearchSectionProps = {
     isAnalyzing: boolean;
     onAnalyzeStudent: (studentId: string) => Promise<void>;
     prefilledStudentId?: string;
-    showTemporaryForm: boolean;
-    onToggleTemporaryForm: () => void;
 };
 
 export function ConnectedStudentSearchSection({
     isAnalyzing,
     onAnalyzeStudent,
     prefilledStudentId,
-    showTemporaryForm,
-    onToggleTemporaryForm,
 }: ConnectedStudentSearchSectionProps) {
     const { user } = useAuth();
     const { setValue } = useFormContext<StudentRiskRequest>();
@@ -88,25 +84,13 @@ export function ConnectedStudentSearchSection({
                 <div className="mb-2 inline-flex rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
                     Existing Student
                 </div>
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-50">
-                            <Brain className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
-                            Student Analytics Lookup
-                        </h2>
-                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            Enter a student ID to view explainable risk analytics and predictions.
-                        </p>
-                    </div>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onToggleTemporaryForm}
-                        className="shrink-0 rounded-xl border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-950"
-                    >
-                        {showTemporaryForm ? 'Hide Temporary Form' : 'Open Temporary Form'}
-                    </Button>
-                </div>
+                <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-50">
+                    <Brain className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
+                    Student Analytics Lookup
+                </h2>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Enter a student ID to view explainable risk analytics and predictions.
+                </p>
             </div>
 
             <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto]">

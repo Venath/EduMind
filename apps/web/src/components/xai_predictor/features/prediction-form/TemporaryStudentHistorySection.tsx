@@ -49,7 +49,7 @@ export function TemporaryStudentHistorySection({
     const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter') {
             event.preventDefault();
-            void loadRecords();
+            void loadRecords(query);
         }
     };
 
@@ -65,13 +65,13 @@ export function TemporaryStudentHistorySection({
                         Saved Temporary Students
                     </h3>
                     <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                        Reopen a saved temporary student records.
+                        Reopen a saved temporary student record.
                     </p>
                 </div>
                 <Button
                     type="button"
                     variant="outline"
-                    onClick={() => void loadRecords()}
+                    onClick={() => void loadRecords(query)}
                     disabled={isLoading}
                     className="rounded-xl"
                 >
@@ -108,7 +108,7 @@ export function TemporaryStudentHistorySection({
                 </div>
                 <Button
                     type="button"
-                    onClick={() => void loadRecords()}
+                    onClick={() => void loadRecords(query)}
                     disabled={isLoading}
                     className="h-11 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 dark:shadow-emerald-950/60"
                 >
@@ -158,7 +158,7 @@ export function TemporaryStudentHistorySection({
                                         </span>
                                         {typeof record.latest_confidence === 'number' ? (
                                             <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                                                Confidence: {(record.latest_confidence * 100).toFixed(0)}%
+                                                Prediction certainty: {(record.latest_confidence * 100).toFixed(0)}%
                                             </span>
                                         ) : null}
                                         {typeof record.latest_risk_score === 'number' ? (
@@ -199,6 +199,22 @@ export function TemporaryStudentHistorySection({
             {hasLoaded && !isLoading && records.length === 0 && !error ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                     No saved temporary students matched that search.
+                </div>
+            ) : null}
+
+            {query.trim() ? (
+                <div className="mt-3 flex justify-end">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        className="rounded-xl text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                        onClick={() => {
+                            setQuery('');
+                            void loadRecords('');
+                        }}
+                    >
+                        Show All Temporary Students
+                    </Button>
                 </div>
             ) : null}
         </section>

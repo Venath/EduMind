@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { xaiService, type TemporaryStudentSummary } from '../../core/services/xaiService';
 
 type UseTemporaryStudentHistoryOptions = {
@@ -9,10 +9,16 @@ export function useTemporaryStudentHistory({
     refreshToken,
 }: UseTemporaryStudentHistoryOptions) {
     const [query, setQuery] = useState('');
+    const queryRef = useRef('');
     const [records, setRecords] = useState<TemporaryStudentSummary[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasLoaded, setHasLoaded] = useState(false);
+
+    const updateQuery = (value: string) => {
+        queryRef.current = value;
+        setQuery(value);
+    };
 
     const totalLabel = useMemo(() => {
         if (!hasLoaded) {
@@ -23,12 +29,13 @@ export function useTemporaryStudentHistory({
     }, [hasLoaded, records.length]);
 
     const loadRecords = async (nextQuery?: string) => {
+        const searchQuery = (nextQuery ?? queryRef.current).trim();
         setIsLoading(true);
         setError(null);
 
         try {
             const response = await xaiService.getTemporaryStudents({
-                query: nextQuery ?? query,
+                query: searchQuery,
                 limit: 8,
             });
             setRecords(response.students);
@@ -47,14 +54,14 @@ export function useTemporaryStudentHistory({
     };
 
     useEffect(() => {
-        void loadRecords(query);
+        void loadRecords();
         // Refresh list after the temporary-student flow persists a new record.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refreshToken]);
 
     return {
         query,
-        setQuery,
+        setQuery: updateQuery,
         records,
         isLoading,
         error,
