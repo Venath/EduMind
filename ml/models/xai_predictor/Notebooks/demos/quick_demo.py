@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 import shap
 import xgboost as xgb
+from pathlib import Path
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
@@ -24,7 +25,12 @@ print("=" * 70)
 # ============================================================
 print("\n📂 STEP 1: Loading OULAD processed data...")
 
-INPUT_FILE = "/Users/ravinbandara/Desktop/Ravin/EduMind/ml/models/xai_predictor/data/oulad_processed.csv"
+PROJECT_ROOT = next(
+    path
+    for path in [Path.cwd(), *Path.cwd().parents]
+    if (path / "ml/models/xai_predictor").exists()
+)
+INPUT_FILE = PROJECT_ROOT / "ml/models/xai_predictor/data/oulad_processed.csv"
 df = pd.read_csv(INPUT_FILE)
 
 print(f"✓ Loaded {len(df):,} students")
