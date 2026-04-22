@@ -53,7 +53,7 @@ export function exportPredictionToPDF(
         <div class="section">
           <h2>Risk Assessment</h2>
           <div class="risk-badge risk-${prediction.risk_level === 'Safe' ? 'safe' : prediction.risk_level === 'Medium Risk' ? 'medium' : 'high'}">
-            ${prediction.risk_level} - ${prediction.confidence.toFixed(2)}% Confidence
+            ${prediction.risk_level} - ${prediction.confidence.toFixed(2)}% Prediction Certainty
           </div>
           <p><strong>Risk Score:</strong> ${(prediction.risk_score * 100).toFixed(2)}%</p>
         </div>

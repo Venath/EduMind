@@ -52,7 +52,7 @@ export function ProbabilitiesSection({
                         </div>
                     </div>
                     <div className="text-right">
-                        <div className="font-medium text-muted-foreground">Confidence</div>
+                        <div className="font-medium text-muted-foreground">Prediction Certainty</div>
                         <div className="mt-1 text-2xl font-bold text-foreground">
                             {(winningValue * 100).toFixed(1)}%
                         </div>
@@ -63,7 +63,7 @@ export function ProbabilitiesSection({
                         value={winningValue * 100}
                         className="h-3 bg-muted/50"
                         indicatorClassName={getBarColor(winningLabel)}
-                        aria-label={`${winningLabel} confidence`}
+                        aria-label={`${winningLabel} prediction certainty`}
                     />
                 </div>
             </div>
@@ -94,7 +94,7 @@ export function ProbabilitiesSection({
                                         value={value * 100}
                                         className="h-2.5 bg-muted/50"
                                         indicatorClassName={getBarColor(key)}
-                                        aria-label={`${key} probability`}
+                                        aria-label={`${key} likelihood`}
                                     />
                                 </div>
                             ))}

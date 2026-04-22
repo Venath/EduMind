@@ -1,15 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { ActionPlanSection } from '../action-plan/ActionPlanSection';
+import { CounterfactualSection } from './CounterfactualSection';
 import { ProbabilitiesSection } from './ProbabilitiesSection';
 import { QuickActions } from './QuickActions';
 import { RiskBadge } from './RiskBadge';
 import { RiskFactorsChart } from './RiskFactorsChart';
 import { RiskGauge } from './RiskGauge';
+import { StudentInsightsSection } from './StudentInsightsSection';
+import { RiskTimelineSection } from './RiskTimelineSection';
 import type { PredictionResultsProps } from './types';
 
 export function PredictionResults({
     prediction,
+    predictionSource,
+    formData,
+    instituteId,
     actionPlan,
     searchTerm,
     filterCategory,
@@ -110,7 +116,7 @@ export function PredictionResults({
                                 />
                             </div>
                             <div className="space-y-4 border-t pt-6 md:border-t-0 md:border-l md:pt-0 md:pl-8">
-                                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Outcome Probability</h4>
+                                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Outcome Likelihood</h4>
                                 <ProbabilitiesSection
                                     probabilities={prediction.probabilities}
                                     riskLevel={prediction.risk_level}
@@ -119,6 +125,23 @@ export function PredictionResults({
                         </div>
                     </CardContent>
                 </Card>
+
+                <CounterfactualSection counterfactual={prediction.counterfactual} />
+
+                <RiskTimelineSection
+                    studentId={prediction.student_id}
+                    predictionId={prediction.prediction_id}
+                    source={predictionSource}
+                    prediction={prediction}
+                    formData={formData}
+                />
+
+                <StudentInsightsSection
+                    prediction={prediction}
+                    formData={formData}
+                    source={predictionSource}
+                    instituteId={instituteId}
+                />
 
                 {/* 3. Personalized Action Plan (Full Width Below) */}
                 <div className="lg:col-span-12">

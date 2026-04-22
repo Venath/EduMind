@@ -3,6 +3,8 @@ import type { RiskPredictionResponse, StudentRiskRequest } from '../../core/serv
 export type PredictionResultsProps = {
     prediction: RiskPredictionResponse;
     formData: StudentRiskRequest;
+    predictionSource: 'connected' | 'temporary';
+    instituteId?: string;
     actionPlan: any[];
     theme: 'dark' | 'light';
     searchTerm: string;
@@ -47,6 +49,25 @@ export type RiskGaugeProps = {
 export type ProbabilitiesSectionProps = {
     probabilities: Record<string, number>;
     riskLevel: string;
+};
+
+export type CounterfactualSectionProps = {
+    counterfactual: RiskPredictionResponse['counterfactual'];
+};
+
+export type RiskTimelineSectionProps = {
+    studentId: string;
+    predictionId: string;
+    source: 'connected' | 'temporary';
+    prediction: RiskPredictionResponse;
+    formData: StudentRiskRequest;
+};
+
+export type StudentInsightsSectionProps = {
+    prediction: RiskPredictionResponse;
+    formData: StudentRiskRequest;
+    source: 'connected' | 'temporary';
+    instituteId?: string;
 };
 
 export type RiskFactor = {

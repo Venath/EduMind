@@ -9,7 +9,7 @@ type XAIOverviewSectionProps = {
     modelLoaded: boolean;
 };
 
-function formatConfidence(value?: number): string {
+function formatPredictionCertainty(value?: number): string {
     if (typeof value !== 'number' || Number.isNaN(value)) {
         return '--';
     }
@@ -123,8 +123,8 @@ export function XAIOverviewSection({
                     <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
                         <Sparkles className="h-4 w-4" />
                     </div>
-                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-50">{formatConfidence(confidence)}</div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Confidence</div>
+                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-50">{formatPredictionCertainty(confidence)}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Prediction Certainty</div>
                 </article>
 
                 <article className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm dark:border-emerald-900 dark:bg-slate-950/75">
