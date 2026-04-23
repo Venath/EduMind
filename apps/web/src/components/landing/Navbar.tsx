@@ -60,9 +60,7 @@ export function Navbar() {
                             className="flex items-center gap-2 cursor-pointer group"
                             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                         >
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center transform transition-transform group-hover:scale-105 group-hover:rotate-3 shadow-lg group-hover:shadow-blue-500/25">
-                                <span className="text-white font-bold text-lg">E</span>
-                            </div>
+                            <img src="/images/EduMind.png" alt="EduMind Logo" className="h-8 w-auto object-contain transform transition-transform group-hover:scale-105 group-hover:rotate-3 shadow-lg group-hover:shadow-blue-500/25" />
                             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                 EduMind
                             </span>
