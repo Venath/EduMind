@@ -10,9 +10,7 @@ export function Footer() {
                     {/* Brand */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">E</span>
-                            </div>
+                            <img src="/images/EduMind.png" alt="EduMind Logo" className="h-8 w-auto object-contain" />
                             <span className="text-xl font-bold text-white">EduMind</span>
                         </div>
                         <p className="text-sm text-gray-400">
