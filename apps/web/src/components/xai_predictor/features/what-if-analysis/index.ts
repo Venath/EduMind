@@ -1,6 +1,7 @@
 export { WhatIfModal } from './WhatIfModal';
 export { WhatIfModalHeader } from './WhatIfModalHeader';
 export { ScenarioIntro } from './ScenarioIntro';
+export { InterventionPresets } from './InterventionPresets';
 export { ChangedMetricsSummary } from './ChangedMetricsSummary';
 export { RiskComparison } from './RiskComparison';
 export { ScenarioHint } from './ScenarioHint';
@@ -15,5 +16,7 @@ export type {
     RiskComparisonProps,
     MetricSliderProps,
     ScenarioControlsProps,
+    InterventionPreset,
+    InterventionPresetsProps,
     ModalActionsProps
 } from './types';

@@ -8,14 +8,20 @@ import { XAIError } from '../errors/XAIError';
 import {
     ConnectedStudentSearchResponseSchema,
     HealthResponseSchema,
+    RiskTimelineResponseSchema,
     RiskPredictionResponseSchema,
     StudentRiskRequestSchema,
+    StudentInsightsRequestSchema,
+    StudentInsightsResponseSchema,
     TemporaryStudentListResponseSchema,
     TemporaryStudentRecordSchema,
     type ConnectedStudentSearchResponse,
     type HealthResponse,
+    type RiskTimelineResponse,
     type RiskPredictionResponse,
     type StudentRiskRequest,
+    type StudentInsightsRequest,
+    type StudentInsightsResponse,
     type TemporaryStudentListResponse,
     type TemporaryStudentRecord,
 } from '../schemas/xai.schemas';
@@ -254,6 +260,70 @@ class XAIService implements IXAIService {
     }
 
     /**
+     * Get persisted XAI risk history for one student.
+     */
+    async getRiskTimeline(
+        studentId: string,
+        options?: { limit?: number; source?: 'auto' | 'connected' | 'temporary' }
+    ): Promise<RiskTimelineResponse> {
+        try {
+            const params = new URLSearchParams();
+            params.set('limit', String(options?.limit ?? 8));
+            params.set('source', options?.source ?? 'auto');
+
+            const response = await fetch(
+                `${this.baseURL}/api/v1/academic-risk/students/${encodeURIComponent(studentId)}/timeline?${params.toString()}`
+            );
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new XAIError(error.detail || 'Could not load student risk timeline', {
+                    statusCode: response.status,
+                    details: error,
+                });
+            }
+
+            const data = await response.json();
+            return RiskTimelineResponseSchema.parse(data);
+        } catch (error) {
+            if (error instanceof XAIError) {
+                throw error;
+            }
+            throw XAIError.fromUnknown(error);
+        }
+    }
+
+    async getStudentInsights(payload: StudentInsightsRequest): Promise<StudentInsightsResponse> {
+        try {
+            const validatedPayload = StudentInsightsRequestSchema.parse(payload);
+
+            const response = await fetch(`${this.baseURL}/api/v1/academic-risk/insights`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(validatedPayload),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: response.statusText }));
+                throw new XAIError(error.detail || 'Could not load integrated XAI insights', {
+                    statusCode: response.status,
+                    details: error,
+                });
+            }
+
+            const data = await response.json();
+            return StudentInsightsResponseSchema.parse(data);
+        } catch (error) {
+            if (error instanceof XAIError) {
+                throw error;
+            }
+            throw XAIError.fromUnknown(error);
+        }
+    }
+
+    /**
      * Batch predict for multiple students
      */
     async batchPredict(students: StudentRiskRequest[]): Promise<RiskPredictionResponse[]> {
@@ -332,7 +402,11 @@ export type {
     RiskFactor,
     RiskPredictionResponse,
     StudentRiskRequest,
+    StudentInsightsRequest,
+    StudentInsightsResponse,
     TemporaryStudentListResponse,
     TemporaryStudentRecord,
     TemporaryStudentSummary,
+    RiskTimelinePoint,
+    RiskTimelineResponse,
 } from '../schemas/xai.schemas';

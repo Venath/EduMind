@@ -7,8 +7,9 @@ export function ScenarioIntro() {
                 <Sliders size={24} className="text-cyan-600" />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-                Adjust student metrics below to explore how different interventions might impact risk levels.
-                This simulation helps identify which factors have the greatest influence on student outcomes.
+                Apply a realistic intervention preset or adjust metrics manually to estimate how the
+                student&apos;s predicted risk could shift. This simulation highlights which changes
+                have the strongest projected impact before any real-world intervention is made.
             </p>
         </div>
     );

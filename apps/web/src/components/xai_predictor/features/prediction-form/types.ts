@@ -6,6 +6,8 @@ export type PredictionFormProps = {
     onSubmit: (e: React.FormEvent) => void;
     onAnalyzeConnectedStudent: (studentId: string) => Promise<void>;
     onLoadTemporaryStudent: (studentId: string) => Promise<void>;
+    activeMode: 'connected' | 'temporary';
+    onActiveModeChange: (mode: 'connected' | 'temporary') => void;
     onClearDraft: () => void;
     isLoading: boolean;
     isHealthy: boolean;
@@ -27,6 +29,4 @@ export type StudentInfoSectionProps = {
     isAnalyzingConnectedStudent: boolean;
     onAnalyzeConnectedStudent: (studentId: string) => Promise<void>;
     prefilledStudentId?: string;
-    showTemporaryForm: boolean;
-    onToggleTemporaryForm: () => void;
 }

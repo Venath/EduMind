@@ -37,3 +37,30 @@ export function getRiskBadgeClass(level?: string | null): string {
 
     return 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300';
 }
+
+export function formatRiskBadgeLabel(level?: string | null): string {
+    const normalized = (level ?? '').trim().toLowerCase();
+
+    if (!normalized) {
+        return 'Unknown';
+    }
+
+    if (normalized === 'safe') {
+        return 'Safe';
+    }
+
+    if (normalized === 'medium' || normalized === 'medium risk') {
+        return 'Medium Risk';
+    }
+
+    if (
+        normalized === 'high' ||
+        normalized === 'high risk' ||
+        normalized === 'at-risk' ||
+        normalized === 'at risk'
+    ) {
+        return 'At-Risk';
+    }
+
+    return level?.trim() || 'Unknown';
+}

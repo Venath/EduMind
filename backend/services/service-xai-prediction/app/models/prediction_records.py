@@ -82,3 +82,21 @@ class TemporaryStudentRecord(TempStudentsBase):
         onupdate=func.now(),
         index=True,
     )
+
+
+class TemporaryStudentPredictionRecord(TempStudentsBase):
+    """Persist every temporary-student prediction so timeline history is available."""
+
+    __tablename__ = "temporary_student_prediction_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(String(64), nullable=False, index=True)
+
+    request_payload = Column(JSONB, nullable=False)
+    response_payload = Column(JSONB, nullable=False)
+
+    risk_level = Column(String(32), nullable=False, index=True)
+    risk_score = Column(Float, nullable=False)
+    confidence = Column(Float, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

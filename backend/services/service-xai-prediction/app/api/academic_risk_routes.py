@@ -4,16 +4,25 @@ Academic Risk Prediction Routes
 
 from app.api.dependencies import get_db, get_temp_students_db
 from app.core.logging import get_logger
-from app.models import AcademicRiskPredictionRecord, TemporaryStudentRecord
+from app.models import (
+    AcademicRiskPredictionRecord,
+    TemporaryStudentPredictionRecord,
+    TemporaryStudentRecord,
+)
 from app.schemas.academic_risk import (
     AcademicRiskRequest,
     AcademicRiskResponse,
+    RiskTimelinePoint,
+    RiskTimelineResponse,
+    StudentInsightsRequest,
+    StudentInsightsResponse,
     TemporaryStudentListResponse,
     TemporaryStudentRecordResponse,
     TemporaryStudentSummary,
 )
 from app.schemas.student_lookup import ConnectedStudentSearchResponse, ConnectedStudentSummary
 from app.services.academic_risk_service import academic_risk_service
+from app.services.student_insights_service import student_insights_service
 from app.services.sync_service import SyncServiceError, sync_service
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc
@@ -21,6 +30,16 @@ from sqlalchemy.orm import Session
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["academic-risk"])
+
+TIMELINE_FIELDS = {
+    "avg_grade": ("Average grade", 100.0, "points"),
+    "grade_consistency": ("Grade consistency", 100.0, "points"),
+    "grade_range": ("Grade range", 100.0, "points"),
+    "assessment_completion_rate": ("Completion rate", 1.0, "%"),
+    "num_assessments": ("Assessments completed", 20.0, ""),
+    "studied_credits": ("Studied credits", 120.0, "credits"),
+    "num_of_prev_attempts": ("Previous attempts", 5.0, ""),
+}
 
 
 @router.get(
@@ -166,6 +185,93 @@ async def get_connected_student_request(
             )
             return fallback_request
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.get(
+    "/academic-risk/students/{student_id}/timeline",
+    response_model=RiskTimelineResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_student_risk_timeline(
+    student_id: str,
+    limit: int = Query(8, ge=1, le=30),
+    source: str = Query(
+        "auto",
+        description="Timeline source: connected, temporary, or auto",
+    ),
+    db: Session = Depends(get_db),
+    temp_db: Session = Depends(get_temp_students_db),
+):
+    """Return persisted XAI risk history for one student."""
+    normalized_source = source.strip().lower()
+    if normalized_source not in {"auto", "connected", "temporary"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="source must be one of: auto, connected, temporary",
+        )
+
+    if normalized_source in {"auto", "connected"}:
+        try:
+            return await sync_service.build_connected_timeline(
+                student_id=student_id,
+                limit=limit,
+                days=max(limit * 4, 30),
+            )
+        except SyncServiceError as exc:
+            logger.warning(
+                "Connected-student timeline fell back from derived history for %s: %s",
+                student_id,
+                exc.detail,
+            )
+        connected_timeline = _build_connected_timeline(db, student_id, limit)
+        if connected_timeline is not None:
+            return connected_timeline
+        if normalized_source == "connected":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No connected-student XAI timeline found for '{student_id}'",
+            )
+
+    temporary_timeline = _build_temporary_timeline(temp_db, student_id, limit)
+    if temporary_timeline is not None:
+        return temporary_timeline
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"No XAI timeline found for student '{student_id}'",
+    )
+
+
+@router.post(
+    "/academic-risk/insights",
+    response_model=StudentInsightsResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_student_insights(
+    payload: StudentInsightsRequest,
+    db: Session = Depends(get_db),
+    temp_db: Session = Depends(get_temp_students_db),
+):
+    """Return integrated XAI insights for similar cases, interventions, and cohort context."""
+    source = payload.source.strip().lower()
+    if source not in {"connected", "temporary"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="source must be connected or temporary",
+        )
+
+    try:
+        return await student_insights_service.build_insights(
+            payload=payload,
+            db=db,
+            temp_db=temp_db,
+        )
+    except Exception as exc:
+        logger.exception("Could not build student insights for %s", payload.request_payload.student_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not build integrated XAI insights",
+        ) from exc
 
 
 @router.post(
@@ -398,6 +504,16 @@ def persist_temporary_student_record(
 ) -> None:
     """Upsert manual temporary-student submissions into the dedicated temp DB."""
     try:
+        history_record = TemporaryStudentPredictionRecord(
+            student_id=request.student_id,
+            request_payload=request.model_dump(mode="json"),
+            response_payload=response.model_dump(mode="json"),
+            risk_level=response.risk_level,
+            risk_score=response.risk_score,
+            confidence=response.confidence,
+        )
+        db.add(history_record)
+
         record = (
             db.query(TemporaryStudentRecord)
             .filter(TemporaryStudentRecord.student_id == request.student_id)
@@ -527,3 +643,180 @@ def get_local_prediction_request(
         return AcademicRiskRequest.model_validate(record.request_payload)
     except Exception:
         return None
+
+
+def _build_connected_timeline(
+    db: Session,
+    student_id: str,
+    limit: int,
+) -> RiskTimelineResponse | None:
+    records = (
+        db.query(AcademicRiskPredictionRecord)
+        .filter(AcademicRiskPredictionRecord.student_id == student_id)
+        .order_by(desc(AcademicRiskPredictionRecord.created_at))
+        .limit(limit)
+        .all()
+    )
+
+    if not records:
+        return None
+
+    points = _build_timeline_points(records)
+    latest_point = points[-1]
+    return RiskTimelineResponse(
+        student_id=student_id,
+        total_points=len(points),
+        trend_direction=_get_trend_direction(points),
+        timeline_basis="saved_history",
+        latest_risk_level=latest_point.risk_level,
+        latest_risk_score=latest_point.risk_score,
+        points=points,
+    )
+
+
+def _build_temporary_timeline(
+    temp_db: Session,
+    student_id: str,
+    limit: int,
+) -> RiskTimelineResponse | None:
+    history_records = (
+        temp_db.query(TemporaryStudentPredictionRecord)
+        .filter(TemporaryStudentPredictionRecord.student_id == student_id)
+        .order_by(desc(TemporaryStudentPredictionRecord.created_at))
+        .limit(limit)
+        .all()
+    )
+
+    if history_records:
+        points = _build_timeline_points(history_records)
+        latest_point = points[-1]
+        return RiskTimelineResponse(
+            student_id=student_id,
+            total_points=len(points),
+            trend_direction=_get_trend_direction(points),
+            timeline_basis="temporary_history",
+            latest_risk_level=latest_point.risk_level,
+            latest_risk_score=latest_point.risk_score,
+            points=points,
+        )
+
+    temporary_record = (
+        temp_db.query(TemporaryStudentRecord)
+        .filter(TemporaryStudentRecord.student_id == student_id)
+        .order_by(
+            desc(TemporaryStudentRecord.updated_at),
+            desc(TemporaryStudentRecord.created_at),
+        )
+        .first()
+    )
+
+    if temporary_record is None:
+        return None
+
+    return RiskTimelineResponse(
+        student_id=student_id,
+        total_points=1,
+        trend_direction="insufficient_data",
+        timeline_basis="temporary_snapshot",
+        latest_risk_level=temporary_record.latest_risk_level,
+        latest_risk_score=float(temporary_record.latest_risk_score)
+        if temporary_record.latest_risk_score is not None
+        else None,
+        points=[
+            RiskTimelinePoint(
+                timestamp=temporary_record.updated_at or temporary_record.created_at,
+                risk_level=temporary_record.latest_risk_level or "Unknown",
+                risk_score=float(temporary_record.latest_risk_score or 0.0),
+                confidence=float(temporary_record.latest_confidence)
+                if temporary_record.latest_confidence is not None
+                else None,
+                avg_grade=float(temporary_record.avg_grade),
+                completion_rate=float(temporary_record.assessment_completion_rate) * 100.0,
+                key_driver="Only the latest temporary prediction is available for this student.",
+            )
+        ],
+    )
+
+
+def _build_timeline_points(records: list) -> list[RiskTimelinePoint]:
+    ordered_records = list(reversed(records))
+    points: list[RiskTimelinePoint] = []
+    previous_payload: dict | None = None
+
+    for record in ordered_records:
+        payload = record.request_payload if isinstance(record.request_payload, dict) else {}
+        completion_rate = _parse_float(payload.get("assessment_completion_rate"))
+        if completion_rate is not None:
+            completion_rate *= 100.0
+
+        points.append(
+            RiskTimelinePoint(
+                timestamp=record.created_at,
+                risk_level=record.risk_level,
+                risk_score=float(record.risk_score),
+                confidence=float(record.confidence)
+                if record.confidence is not None
+                else None,
+                avg_grade=_parse_float(payload.get("avg_grade")),
+                completion_rate=completion_rate,
+                key_driver=_describe_timeline_driver(previous_payload, payload),
+            )
+        )
+        previous_payload = payload
+
+    return points
+
+
+def _parse_float(value) -> float | None:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _describe_timeline_driver(
+    previous_payload: dict | None,
+    current_payload: dict | None,
+) -> str | None:
+    if not previous_payload or not current_payload:
+        return "Baseline XAI analysis recorded."
+
+    top_change: tuple[str, str, float] | None = None
+
+    for field, (label, scale, unit) in TIMELINE_FIELDS.items():
+        previous_value = _parse_float(previous_payload.get(field))
+        current_value = _parse_float(current_payload.get(field))
+
+        if previous_value is None or current_value is None:
+            continue
+
+        delta = current_value - previous_value
+        normalized_change = abs(delta) / scale if scale else abs(delta)
+
+        if top_change is None or normalized_change > top_change[2]:
+            rendered_delta = delta * 100.0 if field == "assessment_completion_rate" else delta
+            suffix = unit
+            top_change = (
+                label,
+                f"{rendered_delta:+.1f}{suffix}".strip(),
+                normalized_change,
+            )
+
+    if top_change is None or top_change[2] < 0.02:
+        return "Risk remained broadly stable between saved analyses."
+
+    return f"Largest shift: {top_change[0]} changed by {top_change[1]}."
+
+
+def _get_trend_direction(points: list[RiskTimelinePoint]) -> str:
+    if len(points) < 2:
+        return "insufficient_data"
+
+    delta = points[-1].risk_score - points[0].risk_score
+    if delta >= 0.05:
+        return "worsening"
+    if delta <= -0.05:
+        return "improving"
+    return "stable"
