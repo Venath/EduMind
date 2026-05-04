@@ -52,9 +52,6 @@ if frontend_path.exists():
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler"""
-    # Ensure required tables exist when the service starts in a fresh environment.
-    Base.metadata.create_all(bind=engine)
-
     print("=" * 60)
     print(f"  {settings.APP_NAME}")
     print(f"  Version: {settings.APP_VERSION}")
