@@ -42,7 +42,6 @@ from app.api import routes_predictions
 from app.api import routes_students
 from app.api import routes_events
 from app.api import routes_scheduling
-from app.core.database import init_db
 
 from backend.shared.messaging import get_broker
 
@@ -161,9 +160,6 @@ async def redirect_to_app():
 async def startup_event():
     """Runs when the application starts"""
     print("EduMind Engagement Tracking Service starting...")
-
-    # Ensure required tables exist when running in Docker or fresh environments.
-    init_db()
     
     # Connect to RabbitMQ
     broker = get_broker(settings.RABBITMQ_URL)
